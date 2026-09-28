@@ -6,8 +6,7 @@ namespace GLTranslate.Domain.Generator;
 /// <summary>
 /// One-shot code generator that turns BCL globalization data (<see cref="CultureInfo"/>,
 /// <see cref="RegionInfo"/>) plus a small curated script map into the generated
-/// <c>*.g.cs</c> data files consumed by GLTranslate.Domain's registries and
-/// <c>RegionFactory</c>.
+/// <c>*.g.cs</c> data files consumed by GLTranslate.Domain's registries.
 /// </summary>
 /// <remarks>
 /// This is a dev-time tool, not shipped with the library. Re-run it whenever the
@@ -502,7 +501,7 @@ internal static class Program
 
         sb.AppendLine("    ];");
         sb.AppendLine();
-        sb.AppendLine("    // Keyed by raw ISO 3166-1 alpha-2 code (e.g. \"US\"), used by RegionFactory and to");
+        sb.AppendLine("    // Keyed by raw ISO 3166-1 alpha-2 code (e.g. \"US\"), used to");
         sb.AppendLine("    // wire up cross-references during generation. Not the same as the domain Id (see Region.Id).");
         sb.AppendLine("    public static readonly ImmutableDictionary<string, Region> ByAlpha2 =");
         sb.AppendLine("        All.ToImmutableDictionary(x => x.Codes.Get<Iso3166Alpha2Code>().Value, x => x);");

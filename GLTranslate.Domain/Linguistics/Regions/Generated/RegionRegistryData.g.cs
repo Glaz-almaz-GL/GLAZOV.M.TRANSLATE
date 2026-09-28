@@ -258,7 +258,7 @@ internal static class RegionRegistryData
         new Region(new RegionId("zimbabwe"), "Zimbabwe", [new Iso3166Alpha2Code("ZW"), new Iso3166Alpha3Code("ZWE"), new Iso3166NumericCode("716")]),
     ];
 
-    // Keyed by raw ISO 3166-1 alpha-2 code (e.g. "US"), used by RegionFactory and to
+    // Keyed by raw ISO 3166-1 alpha-2 code (e.g. "US"), used to
     // wire up cross-references during generation. Not the same as the domain Id (see Region.Id).
     public static readonly ImmutableDictionary<string, Region> ByAlpha2 =
         All.ToImmutableDictionary(x => x.Codes.Get<Iso3166Alpha2Code>().Value, x => x);
