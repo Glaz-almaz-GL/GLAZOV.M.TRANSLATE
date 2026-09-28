@@ -1,4 +1,5 @@
 using GLTranslate.Abstractions.Providers;
+using GLTranslate.Providers.Common;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
@@ -18,7 +19,7 @@ namespace GLTranslate.Providers.Microsoft.Internal;
 /// <c>X-MT-Signature</c> header built by <see cref="MicrosoftSignature"/>.
 /// </para>
 /// </remarks>
-internal sealed class MicrosoftTranslationEngine : IDisposable
+internal sealed class MicrosoftTranslationEngine : ProviderEngine
 {
     private const string ApiHost = "api.cognitive.microsofttranslator.com";
 
@@ -27,18 +28,13 @@ internal sealed class MicrosoftTranslationEngine : IDisposable
     // The endpoint refuses a longer text with 400 Bad Request.
     private const int MaxTextLength = 1000;
 
-    private readonly HttpClient _httpClient;
-    private readonly bool _isExternalHttpClient;
-    private bool _disposed;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="MicrosoftTranslationEngine"/>
     /// class with an <see cref="HttpClient"/> of its own.
     /// </summary>
     public MicrosoftTranslationEngine()
+        : base(MicrosoftProvider.Name)
     {
-        _httpClient = new HttpClient();
-        _isExternalHttpClient = false;
     }
 
     /// <summary>
@@ -52,11 +48,8 @@ internal sealed class MicrosoftTranslationEngine : IDisposable
     /// Thrown when <paramref name="httpClient"/> is <see langword="null"/>.
     /// </exception>
     public MicrosoftTranslationEngine(HttpClient httpClient)
+        : base(MicrosoftProvider.Name, httpClient)
     {
-        ArgumentNullException.ThrowIfNull(httpClient);
-
-        _httpClient = httpClient;
-        _isExternalHttpClient = true;
     }
 
     /// <summary>
@@ -96,7 +89,7 @@ internal sealed class MicrosoftTranslationEngine : IDisposable
         string? sourceLanguageCode,
         CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        ThrowIfDisposed();
         ArgumentException.ThrowIfNullOrWhiteSpace(text);
         ArgumentException.ThrowIfNullOrWhiteSpace(targetLanguageCode);
 
@@ -168,7 +161,7 @@ internal sealed class MicrosoftTranslationEngine : IDisposable
 
         try
         {
-            using HttpResponseMessage httpResponse = await _httpClient
+            using HttpResponseMessage httpResponse = await HttpClient
                 .SendAsync(httpRequest, cancellationToken)
                 .ConfigureAwait(false);
 
@@ -180,11 +173,11 @@ internal sealed class MicrosoftTranslationEngine : IDisposable
         }
         catch (HttpRequestException exception)
         {
-            throw new ProviderException(MicrosoftProvider.Name, "The request to Microsoft Translator failed.", exception);
+            throw RequestFailed(exception);
         }
         catch (JsonException exception)
         {
-            throw new ProviderException(MicrosoftProvider.Name, "Microsoft Translator returned an unexpected response format.", exception);
+            throw UnreadableAnswer(exception);
         }
     }
 
@@ -229,7 +222,7 @@ internal sealed class MicrosoftTranslationEngine : IDisposable
         string toScript,
         CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        ThrowIfDisposed();
         ArgumentException.ThrowIfNullOrWhiteSpace(text);
         ArgumentException.ThrowIfNullOrWhiteSpace(languageCode);
         ArgumentException.ThrowIfNullOrWhiteSpace(fromScript);
@@ -285,19 +278,4 @@ internal sealed class MicrosoftTranslationEngine : IDisposable
         return (translatedText, resolvedSourceLanguageCode);
     }
 
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        if (_disposed)
-        {
-            return;
-        }
-
-        if (!_isExternalHttpClient)
-        {
-            _httpClient.Dispose();
-        }
-
-        _disposed = true;
-    }
 }

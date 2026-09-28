@@ -1,4 +1,5 @@
 using GLTranslate.Abstractions.Providers;
+using GLTranslate.Providers.Common;
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -19,7 +20,7 @@ namespace GLTranslate.Providers.Bing.Internal;
 /// kept until they expire.
 /// </para>
 /// </remarks>
-internal sealed class BingEngine : IDisposable
+internal sealed class BingEngine : ProviderEngine
 {
     private const string HostUrl = "https://www.bing.com";
 
@@ -37,20 +38,18 @@ internal sealed class BingEngine : IDisposable
     // The endpoint refuses a longer text.
     private const int MaxTextLength = 1000;
 
-    private readonly HttpClient _httpClient;
-    private readonly bool _isExternalHttpClient;
     private readonly SemaphoreSlim _credentialsLock = new(1, 1);
 
     private BingCredentials? _credentials;
-    private bool _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BingEngine"/> class with an
     /// <see cref="HttpClient"/> of its own.
     /// </summary>
     public BingEngine()
-        : this(new HttpClient(), isExternal: false)
+        : base(BingProvider.Name)
     {
+        AnnounceABrowser();
     }
 
     /// <summary>
@@ -64,20 +63,18 @@ internal sealed class BingEngine : IDisposable
     /// Thrown when <paramref name="httpClient"/> is <see langword="null"/>.
     /// </exception>
     public BingEngine(HttpClient httpClient)
-        : this(httpClient ?? throw new ArgumentNullException(nameof(httpClient)), isExternal: true)
+        : base(BingProvider.Name, httpClient)
     {
+        AnnounceABrowser();
     }
 
-    private BingEngine(HttpClient httpClient, bool isExternal)
+    private void AnnounceABrowser()
     {
-        _httpClient = httpClient;
-        _isExternalHttpClient = isExternal;
-
-        if (httpClient.DefaultRequestHeaders.UserAgent.Count == 0)
+        if (HttpClient.DefaultRequestHeaders.UserAgent.Count == 0)
         {
             // The page hands its credentials to a browser, so the caller has to
             // look like one.
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
+            HttpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
         }
     }
 
@@ -119,7 +116,7 @@ internal sealed class BingEngine : IDisposable
         string? sourceLanguageCode,
         CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        ThrowIfDisposed();
         ArgumentException.ThrowIfNullOrWhiteSpace(text);
         ArgumentException.ThrowIfNullOrWhiteSpace(targetLanguageCode);
 
@@ -149,7 +146,7 @@ internal sealed class BingEngine : IDisposable
 
         try
         {
-            using HttpResponseMessage httpResponse = await _httpClient
+            using HttpResponseMessage httpResponse = await HttpClient
                 .PostAsync(uri, content, cancellationToken)
                 .ConfigureAwait(false);
 
@@ -161,13 +158,13 @@ internal sealed class BingEngine : IDisposable
         }
         catch (HttpRequestException exception)
         {
-            throw new ProviderException(BingProvider.Name, "The request to Bing Translator failed.", exception);
+            throw RequestFailed(exception);
         }
         catch (JsonException exception)
         {
             // The endpoint answers 200 with an object rather than an array when
             // it refuses the credentials, which is how a stale token shows up.
-            throw new ProviderException(BingProvider.Name, "Bing Translator returned an unexpected response format.", exception);
+            throw UnreadableAnswer(exception);
         }
 
         return Read(answers, sourceLanguageCode);
@@ -227,7 +224,7 @@ internal sealed class BingEngine : IDisposable
 
             try
             {
-                page = await _httpClient.GetStringAsync(new Uri(PageUrl), cancellationToken).ConfigureAwait(false);
+                page = await HttpClient.GetStringAsync(new Uri(PageUrl), cancellationToken).ConfigureAwait(false);
             }
             catch (HttpRequestException exception)
             {
@@ -282,20 +279,13 @@ internal sealed class BingEngine : IDisposable
     }
 
     /// <inheritdoc/>
-    public void Dispose()
+    protected override void Dispose(bool disposing)
     {
-        if (_disposed)
+        if (disposing)
         {
-            return;
+            _credentialsLock.Dispose();
         }
 
-        _credentialsLock.Dispose();
-
-        if (!_isExternalHttpClient)
-        {
-            _httpClient.Dispose();
-        }
-
-        _disposed = true;
+        base.Dispose(disposing);
     }
 }

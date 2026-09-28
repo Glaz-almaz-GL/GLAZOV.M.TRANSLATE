@@ -1,4 +1,5 @@
 using GLTranslate.Abstractions.Providers;
+using GLTranslate.Providers.Common;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
@@ -22,7 +23,7 @@ namespace GLTranslate.Providers.Microsoft.Internal;
 /// which the signature does open, and is fetched again when it expires.
 /// </para>
 /// </remarks>
-internal sealed class MicrosoftTextToSpeechEngine : IDisposable
+internal sealed class MicrosoftTextToSpeechEngine : ProviderEngine
 {
     private const string TokenHost = "dev.microsofttranslator.com";
 
@@ -42,23 +43,19 @@ internal sealed class MicrosoftTextToSpeechEngine : IDisposable
     // Encodes only what SSML requires, leaving every other character as it is.
     private static readonly HtmlEncoder SsmlEncoder = HtmlEncoder.Create(UnicodeRanges.All);
 
-    private readonly HttpClient _httpClient;
-    private readonly bool _isExternalHttpClient;
     private readonly SemaphoreSlim _tokenLock = new(1, 1);
 
     private string? _token;
     private string? _region;
     private DateTimeOffset _tokenExpiresAt;
-    private bool _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MicrosoftTextToSpeechEngine"/>
     /// class with an <see cref="HttpClient"/> of its own.
     /// </summary>
     public MicrosoftTextToSpeechEngine()
+        : base(MicrosoftProvider.Name)
     {
-        _httpClient = new HttpClient();
-        _isExternalHttpClient = false;
     }
 
     /// <summary>
@@ -72,11 +69,8 @@ internal sealed class MicrosoftTextToSpeechEngine : IDisposable
     /// Thrown when <paramref name="httpClient"/> is <see langword="null"/>.
     /// </exception>
     public MicrosoftTextToSpeechEngine(HttpClient httpClient)
+        : base(MicrosoftProvider.Name, httpClient)
     {
-        ArgumentNullException.ThrowIfNull(httpClient);
-
-        _httpClient = httpClient;
-        _isExternalHttpClient = true;
     }
 
     /// <summary>
@@ -110,7 +104,7 @@ internal sealed class MicrosoftTextToSpeechEngine : IDisposable
         string voiceName,
         CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        ThrowIfDisposed();
         ArgumentException.ThrowIfNullOrWhiteSpace(text);
 
         if (text.Length > MaxTextLength)
@@ -141,7 +135,7 @@ internal sealed class MicrosoftTextToSpeechEngine : IDisposable
 
         try
         {
-            using HttpResponseMessage httpResponse = await _httpClient
+            using HttpResponseMessage httpResponse = await HttpClient
                 .SendAsync(httpRequest, cancellationToken)
                 .ConfigureAwait(false);
 
@@ -158,7 +152,7 @@ internal sealed class MicrosoftTextToSpeechEngine : IDisposable
         }
         catch (HttpRequestException exception)
         {
-            throw new ProviderException(MicrosoftProvider.Name, "The request to Microsoft Translator failed.", exception);
+            throw RequestFailed(exception);
         }
     }
 
@@ -204,7 +198,7 @@ internal sealed class MicrosoftTextToSpeechEngine : IDisposable
 
             try
             {
-                using HttpResponseMessage httpResponse = await _httpClient
+                using HttpResponseMessage httpResponse = await HttpClient
                     .SendAsync(httpRequest, cancellationToken)
                     .ConfigureAwait(false);
 
@@ -220,7 +214,7 @@ internal sealed class MicrosoftTextToSpeechEngine : IDisposable
             }
             catch (JsonException exception)
             {
-                throw new ProviderException(MicrosoftProvider.Name, "Microsoft Translator returned an unexpected speech token format.", exception);
+                throw UnreadableAnswer(exception);
             }
 
             if (token is not { Token: { } value, Region: { } region })
@@ -241,20 +235,13 @@ internal sealed class MicrosoftTextToSpeechEngine : IDisposable
     }
 
     /// <inheritdoc/>
-    public void Dispose()
+    protected override void Dispose(bool disposing)
     {
-        if (_disposed)
+        if (disposing)
         {
-            return;
+            _tokenLock.Dispose();
         }
 
-        _tokenLock.Dispose();
-
-        if (!_isExternalHttpClient)
-        {
-            _httpClient.Dispose();
-        }
-
-        _disposed = true;
+        base.Dispose(disposing);
     }
 }

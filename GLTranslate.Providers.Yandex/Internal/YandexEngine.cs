@@ -1,4 +1,5 @@
 using GLTranslate.Abstractions.Providers;
+using GLTranslate.Providers.Common;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -22,7 +23,7 @@ namespace GLTranslate.Providers.Yandex.Internal;
 /// response, so the answer is read in both cases.
 /// </para>
 /// </remarks>
-internal sealed class YandexEngine : IDisposable
+internal sealed class YandexEngine : ProviderEngine
 {
     private const string ApiUrl = "https://translate.yandex.net/api/v1/tr.json";
 
@@ -34,21 +35,19 @@ internal sealed class YandexEngine : IDisposable
     // endpoints start refusing one that has been in use for too long.
     private static readonly TimeSpan SessionLifetime = TimeSpan.FromMinutes(5);
 
-    private readonly HttpClient _httpClient;
-    private readonly bool _isExternalHttpClient;
     private readonly Lock _sessionLock = new();
 
     private Guid _session;
     private DateTimeOffset _sessionExpiresAt;
-    private bool _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="YandexEngine"/> class with
     /// an <see cref="HttpClient"/> of its own.
     /// </summary>
     public YandexEngine()
-        : this(new HttpClient(), isExternal: false)
+        : base(YandexProvider.Name)
     {
+        AnnounceTheApplication();
     }
 
     /// <summary>
@@ -62,20 +61,18 @@ internal sealed class YandexEngine : IDisposable
     /// Thrown when <paramref name="httpClient"/> is <see langword="null"/>.
     /// </exception>
     public YandexEngine(HttpClient httpClient)
-        : this(httpClient ?? throw new ArgumentNullException(nameof(httpClient)), isExternal: true)
+        : base(YandexProvider.Name, httpClient)
     {
+        AnnounceTheApplication();
     }
 
-    private YandexEngine(HttpClient httpClient, bool isExternal)
+    private void AnnounceTheApplication()
     {
-        _httpClient = httpClient;
-        _isExternalHttpClient = isExternal;
-
-        if (httpClient.DefaultRequestHeaders.UserAgent.Count == 0)
+        if (HttpClient.DefaultRequestHeaders.UserAgent.Count == 0)
         {
             // The endpoints answer a caller that does not look like the mobile
             // application with an error.
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
+            HttpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
         }
     }
 
@@ -115,7 +112,7 @@ internal sealed class YandexEngine : IDisposable
         string? sourceLanguageCode,
         CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        ThrowIfDisposed();
         ArgumentException.ThrowIfNullOrWhiteSpace(text);
         ArgumentException.ThrowIfNullOrWhiteSpace(targetLanguageCode);
 
@@ -170,7 +167,7 @@ internal sealed class YandexEngine : IDisposable
     /// </exception>
     public async Task<string> DetectLanguageAsync(string text, CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        ThrowIfDisposed();
         ArgumentException.ThrowIfNullOrWhiteSpace(text);
 
         // This endpoint refuses a POST - "HTTP method is invalid for this
@@ -235,7 +232,7 @@ internal sealed class YandexEngine : IDisposable
         string targetLanguageCode,
         CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        ThrowIfDisposed();
         ArgumentException.ThrowIfNullOrWhiteSpace(text);
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceLanguageCode);
         ArgumentException.ThrowIfNullOrWhiteSpace(targetLanguageCode);
@@ -315,7 +312,7 @@ internal sealed class YandexEngine : IDisposable
 
         try
         {
-            using HttpResponseMessage httpResponse = await _httpClient
+            using HttpResponseMessage httpResponse = await HttpClient
                 .SendAsync(httpRequest, cancellationToken)
                 .ConfigureAwait(false);
 
@@ -336,11 +333,11 @@ internal sealed class YandexEngine : IDisposable
         }
         catch (HttpRequestException exception)
         {
-            throw new ProviderException(YandexProvider.Name, "The request to Yandex failed.", exception);
+            throw RequestFailed(exception);
         }
         catch (JsonException exception)
         {
-            throw new ProviderException(YandexProvider.Name, "Yandex returned an unexpected response format.", exception);
+            throw UnreadableAnswer(exception);
         }
     }
 
@@ -363,19 +360,4 @@ internal sealed class YandexEngine : IDisposable
         }
     }
 
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        if (_disposed)
-        {
-            return;
-        }
-
-        if (!_isExternalHttpClient)
-        {
-            _httpClient.Dispose();
-        }
-
-        _disposed = true;
-    }
 }

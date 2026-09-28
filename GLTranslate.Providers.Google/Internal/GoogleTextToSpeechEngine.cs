@@ -1,4 +1,5 @@
 using GLTranslate.Abstractions.Providers;
+using GLTranslate.Providers.Common;
 
 namespace GLTranslate.Providers.Google.Internal;
 
@@ -24,12 +25,10 @@ namespace GLTranslate.Providers.Google.Internal;
 /// otherwise mutated after construction.
 /// </para>
 /// </remarks>
-internal sealed class GoogleTextToSpeechEngine
+internal sealed class GoogleTextToSpeechEngine : ProviderEngine
 {
     private const string ApiEndpoint = "https://translate.google.com/translate_tts";
     private const int MaxChunkLength = 200;
-
-    private readonly HttpClient _httpClient;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GoogleTextToSpeechEngine"/> class.
@@ -42,10 +41,8 @@ internal sealed class GoogleTextToSpeechEngine
     /// Thrown when <paramref name="httpClient"/> is <see langword="null"/>.
     /// </exception>
     public GoogleTextToSpeechEngine(HttpClient httpClient)
+        : base(GoogleProvider.Name, httpClient)
     {
-        ArgumentNullException.ThrowIfNull(httpClient);
-
-        _httpClient = httpClient;
     }
 
     /// <summary>
@@ -124,7 +121,7 @@ internal sealed class GoogleTextToSpeechEngine
 
         try
         {
-            using HttpResponseMessage response = await _httpClient
+            using HttpResponseMessage response = await HttpClient
                 .GetAsync(new Uri(url), cancellationToken)
                 .ConfigureAwait(false);
 
@@ -134,7 +131,7 @@ internal sealed class GoogleTextToSpeechEngine
         }
         catch (HttpRequestException exception)
         {
-            throw new ProviderException(GoogleProvider.Name, "The request to Google Translate failed.", exception);
+            throw RequestFailed(exception);
         }
     }
 

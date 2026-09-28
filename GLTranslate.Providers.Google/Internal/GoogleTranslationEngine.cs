@@ -1,4 +1,5 @@
 using GLTranslate.Abstractions.Providers;
+using GLTranslate.Providers.Common;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -22,13 +23,9 @@ namespace GLTranslate.Providers.Google.Internal;
 /// otherwise mutated after construction.
 /// </para>
 /// </remarks>
-internal sealed class GoogleTranslationEngine : IDisposable
+internal sealed class GoogleTranslationEngine : ProviderEngine
 {
     private const string ApiEndpoint = "https://translate.googleapis.com/translate_a/single";
-
-    private readonly HttpClient _httpClient;
-    private readonly bool _isExternalHttpClient;
-    private bool _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GoogleTranslationEngine"/> class.
@@ -41,17 +38,17 @@ internal sealed class GoogleTranslationEngine : IDisposable
     /// Thrown when <paramref name="httpClient"/> is <see langword="null"/>.
     /// </exception>
     public GoogleTranslationEngine(HttpClient httpClient)
+        : base(GoogleProvider.Name, httpClient)
     {
-        ArgumentNullException.ThrowIfNull(httpClient);
-
-        _httpClient = httpClient;
-        _isExternalHttpClient = true;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="GoogleTranslationEngine"/>
+    /// class with an <see cref="HttpClient"/> of its own.
+    /// </summary>
     public GoogleTranslationEngine()
+        : base(GoogleProvider.Name)
     {
-        _httpClient = new();
-        _isExternalHttpClient = false;
     }
 
     /// <summary>
@@ -202,7 +199,7 @@ internal sealed class GoogleTranslationEngine : IDisposable
 
         try
         {
-            using HttpResponseMessage httpResponse = await _httpClient
+            using HttpResponseMessage httpResponse = await HttpClient
                 .SendAsync(httpRequest, cancellationToken)
                 .ConfigureAwait(false);
 
@@ -215,30 +212,12 @@ internal sealed class GoogleTranslationEngine : IDisposable
         }
         catch (HttpRequestException exception)
         {
-            throw new ProviderException(GoogleProvider.Name, "The request to Google Translate failed.", exception);
+            throw RequestFailed(exception);
         }
         catch (JsonException exception)
         {
-            throw new ProviderException(GoogleProvider.Name, "Google Translate returned an unexpected response format.", exception);
+            throw UnreadableAnswer(exception);
         }
     }
 
-    private void Dispose(bool disposing)
-    {
-        if (!_disposed)
-        {
-            if (disposing && !_isExternalHttpClient)
-            {
-                _httpClient?.Dispose();
-            }
-
-            _disposed = true;
-        }
-    }
-
-    public void Dispose()
-    {
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
-    }
 }
