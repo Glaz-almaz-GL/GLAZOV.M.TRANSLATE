@@ -1,6 +1,7 @@
 ﻿using GLTranslate.Abstractions.Common;
 using GLTranslate.Abstractions.Interfaces;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 
 namespace GLTranslate.Domain.Registries;
 
@@ -72,7 +73,7 @@ public abstract partial class ImmutableRegistry<TEntity, TId> :
     }
 
     /// <inheritdoc/>
-    public bool TryGet(TId id, out TEntity? entity)
+    public bool TryGet(TId id, [NotNullWhen(true)] out TEntity? entity)
     {
         ArgumentNullException.ThrowIfNull(id);
 

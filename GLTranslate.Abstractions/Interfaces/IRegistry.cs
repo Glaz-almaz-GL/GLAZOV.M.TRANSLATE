@@ -1,4 +1,5 @@
 ﻿using GLTranslate.Abstractions.Common;
+using System.Diagnostics.CodeAnalysis;
 
 namespace GLTranslate.Abstractions.Interfaces;
 
@@ -49,7 +50,7 @@ public interface IRegistry<TEntity, TId>
     /// <see langword="true"/> when the entity exists;
     /// otherwise <see langword="false"/>.
     /// </returns>
-    bool TryGet(TId id, out TEntity? entity);
+    bool TryGet(TId id, [NotNullWhen(true)] out TEntity? entity);
 
 
     /// <summary>

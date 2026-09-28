@@ -36,7 +36,7 @@ public sealed class ScriptRegistryTests
     public void TryGet_KnownId_ReturnsTrue()
     {
         Assert.True(Registry.TryGet(new ScriptId("cyrillic"), out Script? script));
-        Assert.Equal("Cyrillic", script!.Name);
+        Assert.Equal("Cyrillic", script.Name);
     }
 
     [Fact]
