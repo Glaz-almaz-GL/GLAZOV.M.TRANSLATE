@@ -15,7 +15,7 @@ public sealed class TransliterationResult : ProviderResult
     /// <summary>
     /// Gets the transliteration of the source text.
     /// </summary>
-    public Transliteration Transliteration { get; }
+    public TransliteratedText Transliteration { get; }
 
     /// <summary>
     /// Gets the identifier of the language the source text was written in.
@@ -56,7 +56,7 @@ public sealed class TransliterationResult : ProviderResult
     /// </exception>
     public TransliterationResult(
         RequestId requestId,
-        Transliteration transliteration,
+        TransliteratedText transliteration,
         LanguageId languageId,
         bool wasLanguageDetected)
         : base(requestId)

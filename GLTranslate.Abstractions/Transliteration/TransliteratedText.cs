@@ -9,4 +9,4 @@ namespace GLTranslate.Abstractions.Transliteration;
 /// <remarks>
 /// Instances of this class are immutable and thread-safe.
 /// </remarks>
-public sealed class Transliteration(string value) : StringValueObject(value);
+public sealed class TransliteratedText(string value) : StringValueObject(value);

@@ -83,7 +83,7 @@ public sealed class GoogleTransliterationProvider : ITransliterationProvider, ID
 
         return new TransliterationResult(
             request.Id,
-            new Transliteration(transliteration),
+            new TransliteratedText(transliteration),
             resolvedLanguageId,
             wasLanguageDetected: request.LanguageId is null);
     }
