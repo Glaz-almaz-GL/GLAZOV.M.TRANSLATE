@@ -15,10 +15,10 @@ public sealed class Iso6392Code(string value) : LanguageCode(Normalize(value))
             .Trim()
             .ToLowerInvariant();
 
-        if (normalized.Length != 3)
+        if (normalized.Length != 3 || !normalized.All(char.IsAsciiLetter))
         {
-            // ISO 639-2 language code must contain exactly three characters. (rus, eng)
-            throw new ArgumentException("ISO 639-2 language code must contain exactly three characters.", nameof(value));
+            // ISO 639-2 language code must contain exactly three Latin letters. (rus, eng)
+            throw new ArgumentException("ISO 639-2 language code must contain exactly three Latin letters.", nameof(value));
         }
 
         return normalized;

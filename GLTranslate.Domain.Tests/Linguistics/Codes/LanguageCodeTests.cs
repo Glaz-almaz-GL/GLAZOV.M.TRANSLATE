@@ -1,4 +1,4 @@
-using GLTranslate.Domain.Linguistics.Languages.Codes;
+﻿using GLTranslate.Domain.Linguistics.Languages.Codes;
 
 namespace GLTranslate.Domain.Tests.Linguistics.Codes;
 
@@ -55,6 +55,41 @@ public sealed class LanguageCodeTests
     public void Iso6393Code_WrongLength_ThrowsArgumentException(string value)
     {
         Assert.Throws<ArgumentException>(() => new Iso6393Code(value));
+    }
+
+    [Theory]
+    [InlineData("12")]
+    [InlineData("r-")]
+    [InlineData("ру")]
+    [InlineData("rу")]
+    public void Iso6391Code_NonLatinLetters_ThrowsArgumentException(string value)
+    {
+        ArgumentException exception = Assert.Throws<ArgumentException>(() => new Iso6391Code(value));
+
+        Assert.Contains("exactly two Latin letters", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("123")]
+    [InlineData("ru-")]
+    [InlineData("рус")]
+    [InlineData("ruс")]
+    public void Iso6392Code_NonLatinLetters_ThrowsArgumentException(string value)
+    {
+        ArgumentException exception = Assert.Throws<ArgumentException>(() => new Iso6392Code(value));
+
+        Assert.Contains("exactly three Latin letters", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("123")]
+    [InlineData("ru-")]
+    [InlineData("рус")]
+    public void Iso6393Code_NonLatinLetters_ThrowsArgumentException(string value)
+    {
+        ArgumentException exception = Assert.Throws<ArgumentException>(() => new Iso6393Code(value));
+
+        Assert.Contains("exactly three Latin letters", exception.Message, StringComparison.Ordinal);
     }
 
     [Theory]
