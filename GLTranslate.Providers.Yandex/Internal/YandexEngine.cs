@@ -1,5 +1,6 @@
 using GLTranslate.Abstractions.Providers;
 using GLTranslate.Providers.Common;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -28,6 +29,8 @@ internal sealed class YandexEngine : ProviderEngine
     private const string ApiUrl = "https://translate.yandex.net/api/v1/tr.json";
 
     private const string TransliterationUrl = "https://translate.yandex.net/translit/translit";
+
+    private const string RecognitionUrl = "https://translate.yandex.net/ocr/v1.1/recognize";
 
     private const string UserAgent = "ru.yandex.translate/3.20.2024";
 
@@ -112,34 +115,100 @@ internal sealed class YandexEngine : ProviderEngine
         string? sourceLanguageCode,
         CancellationToken cancellationToken = default)
     {
+        (IReadOnlyList<string> translations, string resolvedSourceLanguageCode) = await TranslateAsync(
+            [text],
+            targetLanguageCode,
+            sourceLanguageCode,
+            cancellationToken)
+            .ConfigureAwait(false);
+
+        return (translations[0], resolvedSourceLanguageCode);
+    }
+
+    /// <summary>
+    /// Translates several texts in one request.
+    /// </summary>
+    /// <param name="texts">
+    /// The texts to translate. The endpoint answers with one translation per
+    /// text, in the same order.
+    /// </param>
+    /// <param name="targetLanguageCode">
+    /// The language code to translate into.
+    /// </param>
+    /// <param name="sourceLanguageCode">
+    /// The language code the texts are written in, or <see langword="null"/>
+    /// to let the endpoint detect it.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token that can be used to cancel the operation.
+    /// </param>
+    /// <returns>
+    /// The translations and the code of the language they were translated from.
+    /// </returns>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="texts"/> is empty or holds an empty text,
+    /// or when <paramref name="targetLanguageCode"/> is empty or consists only
+    /// of white-space characters.
+    /// </exception>
+    /// <exception cref="ObjectDisposedException">
+    /// Thrown when the engine has been disposed.
+    /// </exception>
+    /// <exception cref="ProviderException">
+    /// Thrown when the request fails, when the endpoint reports a failure, or
+    /// when it answers with something this engine cannot read.
+    /// </exception>
+    public async Task<(IReadOnlyList<string> Translations, string SourceLanguageCode)> TranslateAsync(
+        IReadOnlyList<string> texts,
+        string targetLanguageCode,
+        string? sourceLanguageCode,
+        CancellationToken cancellationToken = default)
+    {
         ThrowIfDisposed();
-        ArgumentException.ThrowIfNullOrWhiteSpace(text);
+        ArgumentNullException.ThrowIfNull(texts);
         ArgumentException.ThrowIfNullOrWhiteSpace(targetLanguageCode);
+
+        if (texts.Count == 0)
+        {
+            throw new ArgumentException("There is nothing to translate.", nameof(texts));
+        }
 
         string direction = sourceLanguageCode is null
             ? targetLanguageCode
             : $"{sourceLanguageCode}-{targetLanguageCode}";
 
+        List<KeyValuePair<string, string>> fields = [];
+
+        foreach (string text in texts)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(text, nameof(texts));
+
+            fields.Add(new("text", text));
+        }
+
+        fields.Add(new("lang", direction));
+
         YandexTranslationResponse? answer = await PostAsync(
             $"{ApiUrl}/translate{Query()}",
-            [new("text", text), new("lang", direction)],
+            [.. fields],
             YandexTranslationJsonContext.Default.YandexTranslationResponse,
             cancellationToken)
             .ConfigureAwait(false);
 
         if (answer is null)
         {
+            // Empty response
             throw new ProviderException(YandexProvider.Name, "Yandex returned an empty response.");
         }
 
         Ensure(answer.Code, answer.Message);
 
-        if (answer.Text is not [{ } translatedText, ..])
+        if (answer.Text is not { Count: > 0 } translations || translations.Count != texts.Count)
         {
+            // No translation
             throw new ProviderException(YandexProvider.Name, "Yandex returned no translation.");
         }
 
-        return (translatedText, ReadSourceLanguage(answer.Lang, sourceLanguageCode));
+        return (translations, ReadSourceLanguage(answer.Lang, sourceLanguageCode));
     }
 
     /// <summary>
@@ -188,12 +257,9 @@ internal sealed class YandexEngine : ProviderEngine
 
         Ensure(answer.Code, answer.Message);
 
-        if (string.IsNullOrWhiteSpace(answer.Lang))
-        {
-            throw new ProviderException(YandexProvider.Name, "Yandex detected no language.");
-        }
-
-        return answer.Lang;
+        return string.IsNullOrWhiteSpace(answer.Lang)
+            ? throw new ProviderException(YandexProvider.Name, "Yandex detected no language.")
+            : answer.Lang;
     }
 
     /// <summary>
@@ -246,12 +312,99 @@ internal sealed class YandexEngine : ProviderEngine
             cancellationToken)
             .ConfigureAwait(false);
 
-        if (string.IsNullOrWhiteSpace(transliteration))
+        return string.IsNullOrWhiteSpace(transliteration)
+            ? throw new ProviderException(YandexProvider.Name, "Yandex returned no transliteration.")
+            : transliteration;
+    }
+
+    /// <summary>
+    /// Reads the text on the specified image.
+    /// </summary>
+    /// <param name="image">
+    /// The bytes of the image.
+    /// </param>
+    /// <param name="mediaType">
+    /// The media type of the image, such as <c>image/jpeg</c>.
+    /// </param>
+    /// <param name="fileName">
+    /// The file name to send the image under.
+    /// </param>
+    /// <param name="languageCode">
+    /// The language code the text is expected to be written in, or
+    /// <see langword="null"/> to let the endpoint decide.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token that can be used to cancel the operation.
+    /// </param>
+    /// <returns>
+    /// What the endpoint read.
+    /// </returns>
+    /// <exception cref="ArgumentException">
+    /// Thrown when an argument is empty or consists only of white-space
+    /// characters.
+    /// </exception>
+    /// <exception cref="ObjectDisposedException">
+    /// Thrown when the engine has been disposed.
+    /// </exception>
+    /// <exception cref="ProviderException">
+    /// Thrown when the request fails, when the endpoint reports a failure, or
+    /// when it answers with something this engine cannot read.
+    /// </exception>
+    public async Task<YandexOcrData> RecognizeAsync(
+        ReadOnlyMemory<byte> image,
+        string mediaType,
+        string fileName,
+        string? languageCode,
+        CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        ArgumentException.ThrowIfNullOrWhiteSpace(mediaType);
+        ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
+
+        if (image.IsEmpty)
         {
-            throw new ProviderException(YandexProvider.Name, "Yandex returned no transliteration.");
+            throw new ArgumentException("An image cannot be empty.", nameof(image));
         }
 
-        return transliteration;
+        string url = $"{RecognitionUrl}?srv=android&sid={GetSession():N}" +
+                     $"&lang={Uri.EscapeDataString(languageCode ?? "*")}&rotate=auto";
+
+        // This endpoint refuses the bytes on their own - "Unsupported media
+        // type" - and wants them as a file of a form, the way the application
+        // uploads a photograph.
+        using MultipartFormDataContent content = [];
+        using ByteArrayContent file = new(image.ToArray());
+
+        file.Headers.ContentType = new MediaTypeHeaderValue(mediaType);
+        content.Add(file, "file", fileName);
+
+        YandexOcrResponse? answer;
+
+        try
+        {
+            using HttpResponseMessage httpResponse = await HttpClient
+                .PostAsync(new Uri(url), content, cancellationToken)
+                .ConfigureAwait(false);
+
+            answer = await httpResponse.Content
+                .ReadFromJsonAsync(YandexTranslationJsonContext.Default.YandexOcrResponse, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (HttpRequestException exception)
+        {
+            throw RequestFailed(exception);
+        }
+        catch (JsonException exception)
+        {
+            throw UnreadableAnswer(exception);
+        }
+
+        if (answer is null || !string.Equals(answer.Status, "success", StringComparison.Ordinal))
+        {
+            throw new ProviderException(YandexProvider.Name, "Yandex could not read the image.");
+        }
+
+        return answer.Data ?? new YandexOcrData();
     }
 
     private static string ReadSourceLanguage(string? direction, string? sourceLanguageCode)
@@ -265,14 +418,11 @@ internal sealed class YandexEngine : ProviderEngine
         // detected source language is reported.
         int separator = direction?.IndexOf('-') ?? -1;
 
-        if (separator <= 0)
-        {
-            throw new ProviderException(
+        return separator <= 0
+            ? throw new ProviderException(
                 YandexProvider.Name,
-                "Yandex named no source language, although none was given.");
-        }
-
-        return direction![..separator];
+                "Yandex named no source language, although none was given.")
+            : direction![..separator];
     }
 
     private static void Ensure(int code, string? message)
@@ -322,14 +472,11 @@ internal sealed class YandexEngine : ProviderEngine
                 .ReadFromJsonAsync(responseTypeInfo, cancellationToken)
                 .ConfigureAwait(false);
 
-            if (!httpResponse.IsSuccessStatusCode && answer is not YandexTranslationResponse and not YandexDetectionResponse)
-            {
-                throw new ProviderException(
+            return !httpResponse.IsSuccessStatusCode && answer is not YandexTranslationResponse and not YandexDetectionResponse
+                ? throw new ProviderException(
                     YandexProvider.Name,
-                    $"The request to Yandex failed with status {(int)httpResponse.StatusCode}.");
-            }
-
-            return answer;
+                    $"The request to Yandex failed with status {(int)httpResponse.StatusCode}.")
+                : answer;
         }
         catch (HttpRequestException exception)
         {

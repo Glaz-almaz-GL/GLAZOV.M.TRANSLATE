@@ -8,5 +8,6 @@ namespace GLTranslate.Providers.Yandex.Internal;
 /// </summary>
 [JsonSerializable(typeof(YandexTranslationResponse))]
 [JsonSerializable(typeof(YandexDetectionResponse))]
+[JsonSerializable(typeof(YandexOcrResponse))]
 [JsonSerializable(typeof(string))]
 internal sealed partial class YandexTranslationJsonContext : JsonSerializerContext;
