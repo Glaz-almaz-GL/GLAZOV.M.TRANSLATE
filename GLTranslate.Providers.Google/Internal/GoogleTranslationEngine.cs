@@ -1,4 +1,5 @@
 using GLTranslate.Abstractions.Providers;
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -181,12 +182,23 @@ internal sealed class GoogleTranslationEngine : IDisposable
                      "&dj=1&source=input" +
                      $"&tk={Uri.EscapeDataString(token)}";
 
-        using FormUrlEncodedContent content = new([new KeyValuePair<string, string>("q", text)]);
+        // The endpoint answers 429 Too Many Requests to every HTTP/1.1 call, whatever
+        // the token, the headers or the caller, and answers the very same request over
+        // HTTP/2 normally. That is why the version is requested explicitly instead of
+        // being left to the HttpClient default, which is HTTP/1.1. There is deliberately
+        // no fallback to HTTP/1.1: it would only replace a clear protocol failure with
+        // the 429 the endpoint always gives there.
+        using HttpRequestMessage httpRequest = new(HttpMethod.Post, new Uri(url))
+        {
+            Version = HttpVersion.Version20,
+            VersionPolicy = HttpVersionPolicy.RequestVersionOrHigher,
+            Content = new FormUrlEncodedContent([new KeyValuePair<string, string>("q", text)]),
+        };
 
         try
         {
             using HttpResponseMessage httpResponse = await _httpClient
-                .PostAsync(new Uri(url), content, cancellationToken)
+                .SendAsync(httpRequest, cancellationToken)
                 .ConfigureAwait(false);
 
             httpResponse.EnsureSuccessStatusCode();
