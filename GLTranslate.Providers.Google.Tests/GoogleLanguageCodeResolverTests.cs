@@ -75,4 +75,43 @@ public sealed class GoogleLanguageCodeResolverTests
 
         Assert.Equal(original, roundTripped);
     }
+
+    [Theory]
+    [InlineData("chinese", "zh-CN")]
+    public void ToGoogleCode_LanguageWithItsOwnGoogleCode_ReturnsThatCode(string languageId, string expectedCode)
+    {
+        string code = GoogleLanguageCodeResolver.ToGoogleCode(new LanguageId(languageId));
+
+        Assert.Equal(expectedCode, code);
+    }
+
+    [Theory]
+    [InlineData("iw", "hebrew")]
+    [InlineData("jw", "javanese")]
+    [InlineData("in", "indonesian")]
+    [InlineData("ji", "yiddish")]
+    [InlineData("mo", "romanian")]
+    [InlineData("nb", "norwegian")]
+    [InlineData("nn", "norwegian")]
+    [InlineData("zh-CN", "chinese")]
+    [InlineData("zh-TW", "chinese")]
+    [InlineData("zh-Hans", "chinese")]
+    [InlineData("zh-Hant", "chinese")]
+    [InlineData("ZH-tw", "chinese")]
+    public void FromGoogleCode_GoogleOwnCode_ReturnsLanguageId(string googleCode, string expectedLanguageId)
+    {
+        LanguageId languageId = GoogleLanguageCodeResolver.FromGoogleCode(googleCode);
+
+        Assert.Equal(expectedLanguageId, languageId.Value);
+    }
+
+    [Fact]
+    public void ToGoogleCode_AndBack_ReturnsTheSameLanguage()
+    {
+        LanguageId chinese = new("chinese");
+
+        string code = GoogleLanguageCodeResolver.ToGoogleCode(chinese);
+
+        Assert.Equal(chinese, GoogleLanguageCodeResolver.FromGoogleCode(code));
+    }
 }

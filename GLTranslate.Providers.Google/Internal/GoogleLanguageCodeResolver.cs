@@ -20,6 +20,35 @@ internal static class GoogleLanguageCodeResolver
 {
     private const string AutoDetectCode = "auto";
 
+    // Google Translate does not speak plain ISO 639-1 everywhere. On the way out
+    // it wants its own code for the languages listed here; the plain ISO 639-1
+    // code is used for everything else.
+    private static readonly ImmutableDictionary<string, string> GoogleCodeByIso6391 =
+        new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            // Google has no plain "zh": it asks which Chinese. The domain model
+            // writes Chinese in the simplified script, so that is what is sent.
+            ["zh"] = "zh-CN",
+        }.ToImmutableDictionary();
+
+    // On the way in Google answers with codes that are not ISO 639-1 at all:
+    // codes withdrawn from the standard in 1989, and Chinese split by script.
+    private static readonly ImmutableDictionary<string, string> Iso6391ByGoogleCode =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["iw"] = "he",
+            ["jw"] = "jv",
+            ["in"] = "id",
+            ["ji"] = "yi",
+            ["mo"] = "ro",
+            ["nb"] = "no",
+            ["nn"] = "no",
+            ["zh-CN"] = "zh",
+            ["zh-TW"] = "zh",
+            ["zh-Hans"] = "zh",
+            ["zh-Hant"] = "zh",
+        }.ToImmutableDictionary(StringComparer.OrdinalIgnoreCase);
+
     private static readonly Lazy<ImmutableDictionary<string, LanguageId>> LanguagesByIso6391 = new(BuildIndex);
 
     /// <summary>
@@ -67,7 +96,9 @@ internal static class GoogleLanguageCodeResolver
                 $"Language '{languageId.Value}' has no ISO 639-1 code, which Google Translate requires.");
         }
 
-        return code.Value;
+        return GoogleCodeByIso6391.TryGetValue(code.Value, out string? googleCode)
+            ? googleCode
+            : code.Value;
     }
 
     /// <summary>
@@ -92,7 +123,14 @@ internal static class GoogleLanguageCodeResolver
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(googleLanguageCode);
 
-        if (!LanguagesByIso6391.Value.TryGetValue(googleLanguageCode.ToLowerInvariant(), out LanguageId? languageId))
+        string code = googleLanguageCode.Trim();
+
+        if (Iso6391ByGoogleCode.TryGetValue(code, out string? iso6391))
+        {
+            code = iso6391;
+        }
+
+        if (!LanguagesByIso6391.Value.TryGetValue(code.ToLowerInvariant(), out LanguageId? languageId))
         {
             // The Google Translate endpoint returned a language code that is not known to GLTranslate.
             throw new ProviderException(
