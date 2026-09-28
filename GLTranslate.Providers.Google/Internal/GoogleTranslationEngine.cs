@@ -188,6 +188,11 @@ internal sealed class GoogleTranslationEngine : IDisposable
         // being left to the HttpClient default, which is HTTP/1.1. There is deliberately
         // no fallback to HTTP/1.1: it would only replace a clear protocol failure with
         // the 429 the endpoint always gives there.
+        //
+        // Should HTTP/2 ever stop being an option, the same endpoint also answers over
+        // HTTP/1.1 with client=dict-chrome-ex and no tk at all. That client returns the
+        // same JSON shape - sentences, dict, src, src_translit - so only the query
+        // string changes, and the token becomes dead weight.
         using HttpRequestMessage httpRequest = new(HttpMethod.Post, new Uri(url))
         {
             Version = HttpVersion.Version20,
