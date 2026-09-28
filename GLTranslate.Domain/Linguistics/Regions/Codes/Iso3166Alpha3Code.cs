@@ -13,7 +13,7 @@ public sealed class Iso3166Alpha3Code(string value) : RegionCode(Normalize(value
 
         value = value.Trim().ToUpperInvariant();
 
-        if (value.Length != 3 || !value.All(char.IsLetter))
+        if (value.Length != 3 || !value.All(char.IsAsciiLetter))
         {
             // ISO 3166-1 alpha-3 code must contain exactly three letters. (RUS, USA)
             throw new ArgumentException("ISO 3166-1 alpha-3 code must contain exactly three letters.", nameof(value));

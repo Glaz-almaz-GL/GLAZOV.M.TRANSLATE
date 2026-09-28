@@ -72,7 +72,16 @@ public sealed class EntitySet<TEntity, TId> :
     /// <exception cref="ArgumentOutOfRangeException">
     /// Thrown when <paramref name="index"/> is outside the valid range.
     /// </exception>
-    public TEntity this[int index] => _values[index];
+    public TEntity this[int index]
+    {
+        get
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(index);
+            ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, _values.Length);
+
+            return _values[index];
+        }
+    }
 
     /// <summary>
     /// Gets the number of entities in the collection.

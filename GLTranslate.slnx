@@ -4,6 +4,7 @@
   </Folder>
   <Project Path="GLTranslate.Abstractions/GLTranslate.Abstractions.csproj" Id="8ef45718-5278-42d6-aafa-b2f19bff1170" />
   <Project Path="GLTranslate.Domain/GLTranslate.Domain.csproj" Id="908253e2-7d5d-4e92-bd07-3446e17da2a0" />
+  <Project Path="GLTranslate.Domain.Tests/GLTranslate.Domain.Tests.csproj" />
   <Project Path="GLTranslate.Providers.Google/GLTranslate.Providers.Google.csproj" />
   <Project Path="GLTranslate.Providers.Google.Tests/GLTranslate.Providers.Google.Tests.csproj" />
   <Project Path="tools/GLTranslate.Domain.Generator/GLTranslate.Domain.Generator.csproj" />

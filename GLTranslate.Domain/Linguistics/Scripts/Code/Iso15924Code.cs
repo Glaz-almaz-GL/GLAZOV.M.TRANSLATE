@@ -22,7 +22,7 @@ public sealed class Iso15924Code(string value) : ScriptCode(Normalize(value))
             throw new ArgumentException("ISO 15924 codes must consist of exactly four letters.", nameof(value));
         }
 
-        if (!value.All(char.IsLetter))
+        if (!value.All(char.IsAsciiLetter))
         {
             // ISO 15924 codes must consist of exactly four letters. (Latn and Cyrl, not Латин and Кирил)
             throw new ArgumentException("ISO 15924 codes may contain only Latin letters.", nameof(value));

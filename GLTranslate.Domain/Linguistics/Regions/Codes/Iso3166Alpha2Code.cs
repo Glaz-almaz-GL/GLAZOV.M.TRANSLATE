@@ -13,7 +13,7 @@ public sealed class Iso3166Alpha2Code(string value) : RegionCode(Normalize(value
 
         value = value.Trim().ToUpperInvariant();
 
-        if (value.Length != 2 || !value.All(char.IsLetter))
+        if (value.Length != 2 || !value.All(char.IsAsciiLetter))
         {
             // ISO 3166-1 alpha-2 code must contain exactly two letters. (RU, US)
             throw new ArgumentException("ISO 3166-1 alpha-2 code must contain exactly two letters.", nameof(value));

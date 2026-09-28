@@ -235,7 +235,16 @@ public sealed class CodeSet<TCode> : IReadOnlyList<TCode>
     /// <exception cref="ArgumentOutOfRangeException">
     /// Thrown when <paramref name="index"/> is outside the valid range.
     /// </exception>
-    public TCode this[int index] => _values[index];
+    public TCode this[int index]
+    {
+        get
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(index);
+            ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, _values.Length);
+
+            return _values[index];
+        }
+    }
 
     /// <summary>
     /// Gets the number of codes in the collection.
