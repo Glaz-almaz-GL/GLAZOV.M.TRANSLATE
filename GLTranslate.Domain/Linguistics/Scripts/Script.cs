@@ -8,6 +8,15 @@ namespace GLTranslate.Domain.Linguistics.Scripts;
 /// <summary>
 /// Represents a writing system supported by GLTranslate.
 /// </summary>
+/// <remarks>
+/// <para>
+/// A writing system represents a script independently from the languages
+/// written in it and from translation providers.
+/// </para>
+/// <para>
+/// Instances of <see cref="Script"/> are immutable and thread-safe.
+/// </para>
+/// </remarks>
 [DebuggerDisplay("{Id,nq} ({Name})")]
 public sealed class Script :
     IIdentifiable<ScriptId>,

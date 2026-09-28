@@ -9,6 +9,8 @@ namespace GLTranslate.Domain.Linguistics.Cultures;
 /// </summary>
 /// <remarks>
 /// Provides read-only lookup of cultures by their BCP 47 identifier.
+///
+/// The registry is immutable and thread-safe.
 /// </remarks>
 public sealed class CultureRegistry(IEnumerable<Culture> cultures) : ImmutableRegistry<Culture, CultureId>(cultures)
 {

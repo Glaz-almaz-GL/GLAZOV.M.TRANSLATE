@@ -9,6 +9,8 @@ namespace GLTranslate.Domain.Linguistics.Languages;
 /// </summary>
 /// <remarks>
 /// Provides read-only lookup of languages by identifier.
+///
+/// The registry is immutable and thread-safe.
 /// </remarks>
 public sealed partial class LanguageRegistry(IEnumerable<Language> languages) : ImmutableRegistry<Language, LanguageId>(languages)
 {

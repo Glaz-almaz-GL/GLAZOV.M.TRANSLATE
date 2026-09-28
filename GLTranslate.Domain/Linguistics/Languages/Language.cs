@@ -47,8 +47,14 @@ public sealed class Language :
     public CodeSet<LanguageCode> Codes { get; }
 
     /// <summary>
-    /// Gets the writing systems supported by the language.
+    /// Gets the writing systems the language is written in.
     /// </summary>
+    /// <remarks>
+    /// The order is meaningful: the first writing system is the primary one
+    /// for the language. A language written in several scripts may be
+    /// written in several directions, so the writing direction is read from
+    /// the writing system rather than from the language.
+    /// </remarks>
     public EntitySet<Script, ScriptId> Scripts { get; }
 
     #endregion

@@ -8,6 +8,9 @@ namespace GLTranslate.Domain.Linguistics.Regions;
 /// <summary>
 /// Represents a geographic region used for localization purposes.
 /// </summary>
+/// <remarks>
+/// Instances of <see cref="Region"/> are immutable and thread-safe.
+/// </remarks>
 [DebuggerDisplay("{Id,nq} ({Name})")]
 public sealed class Region :
     IIdentifiable<RegionId>,

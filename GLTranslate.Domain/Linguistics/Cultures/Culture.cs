@@ -11,6 +11,15 @@ namespace GLTranslate.Domain.Linguistics.Cultures;
 /// <summary>
 /// Represents a linguistic culture supported by GLTranslate.
 /// </summary>
+/// <remarks>
+/// <para>
+/// A culture binds a language to the region and the writing system it is
+/// used with. Both are optional: a culture may name a language alone.
+/// </para>
+/// <para>
+/// Instances of <see cref="Culture"/> are immutable and thread-safe.
+/// </para>
+/// </remarks>
 [DebuggerDisplay("{Id,nq}")]
 public sealed class Culture :
     IIdentifiable<CultureId>,

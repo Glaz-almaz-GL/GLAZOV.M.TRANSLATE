@@ -17,6 +17,9 @@ namespace GLTranslate.Abstractions.Common;
 /// <typeparam name="TEntity">
 /// The entity type contained in the collection.
 /// </typeparam>
+/// <typeparam name="TId">
+/// The type of the entity identifier.
+/// </typeparam>
 public sealed class EntitySet<TEntity, TId> :
     IReadOnlyList<TEntity>
     where TId : notnull
@@ -27,7 +30,7 @@ public sealed class EntitySet<TEntity, TId> :
     private readonly ImmutableArray<TEntity> _values;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EntitySet{TEntity}"/> class.
+    /// Initializes a new instance of the <see cref="EntitySet{TEntity, TId}"/> class.
     /// </summary>
     /// <param name="entities">
     /// The entities to include in the collection.
