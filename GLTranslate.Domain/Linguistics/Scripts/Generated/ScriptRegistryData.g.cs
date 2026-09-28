@@ -3,7 +3,7 @@
 // </auto-generated>
 
 using GLTranslate.Abstractions.Linguistics.Scripts;
-using GLTranslate.Domain.Linguistics.Scripts.Code;
+using GLTranslate.Domain.Linguistics.Scripts.Codes;
 using System.Collections.Immutable;
 
 namespace GLTranslate.Domain.Linguistics.Scripts.Generated;

@@ -1,6 +1,6 @@
 ﻿using GLTranslate.Abstractions.Linguistics.Scripts;
 
-namespace GLTranslate.Domain.Linguistics.Scripts.Code;
+namespace GLTranslate.Domain.Linguistics.Scripts.Codes;
 
 /// <summary>
 /// Represents an ISO 15924 script code.

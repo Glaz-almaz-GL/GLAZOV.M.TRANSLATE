@@ -1,4 +1,4 @@
-﻿using GLTranslate.Domain.Linguistics.Scripts.Code;
+﻿using GLTranslate.Domain.Linguistics.Scripts.Codes;
 
 namespace GLTranslate.Domain.Tests.Linguistics.Codes;
 

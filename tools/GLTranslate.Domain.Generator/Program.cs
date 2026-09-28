@@ -352,7 +352,7 @@ internal static class Program
 
         WriteHeader(sb);
         sb.AppendLine("using GLTranslate.Abstractions.Linguistics.Scripts;");
-        sb.AppendLine("using GLTranslate.Domain.Linguistics.Scripts.Code;");
+        sb.AppendLine("using GLTranslate.Domain.Linguistics.Scripts.Codes;");
         sb.AppendLine("using System.Collections.Immutable;");
         sb.AppendLine();
         sb.AppendLine("namespace GLTranslate.Domain.Linguistics.Scripts.Generated;");
