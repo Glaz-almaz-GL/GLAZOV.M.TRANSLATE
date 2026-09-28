@@ -37,27 +37,19 @@ namespace GLTranslate.Domain.Linguistics.Cultures.Codes;
 /// Instances of <see cref="Bcp47Code"/> are immutable and thread-safe.
 /// </para>
 /// </remarks>
-public sealed class Bcp47Code : CultureCode
+/// <param name="value">
+/// The textual representation of the BCP 47 culture code.
+/// </param>
+/// <exception cref="ArgumentNullException">
+/// Thrown when <paramref name="value"/> is <see langword="null"/>.
+/// </exception>
+/// <exception cref="ArgumentException">
+/// Thrown when <paramref name="value"/> is empty, contains only
+/// white-space characters, or is not a well-formed BCP 47 code of the
+/// supported shape.
+/// </exception>
+public sealed class Bcp47Code(string value) : CultureCode(Normalize(value))
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Bcp47Code"/> class.
-    /// </summary>
-    /// <param name="value">
-    /// The textual representation of the BCP 47 culture code.
-    /// </param>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="value"/> is <see langword="null"/>.
-    /// </exception>
-    /// <exception cref="ArgumentException">
-    /// Thrown when <paramref name="value"/> is empty, contains only
-    /// white-space characters, or is not a well-formed BCP 47 code of the
-    /// supported shape.
-    /// </exception>
-    public Bcp47Code(string value)
-        : base(Normalize(value))
-    {
-    }
-
     /// <summary>
     /// Normalizes the specified BCP 47 code.
     /// </summary>

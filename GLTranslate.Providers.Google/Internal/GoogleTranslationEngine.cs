@@ -24,9 +24,9 @@ namespace GLTranslate.Providers.Google.Internal;
 internal sealed class GoogleTranslationEngine : IDisposable
 {
     private const string ApiEndpoint = "https://translate.googleapis.com/translate_a/single";
-    private readonly bool IsExternalHttpClient;
 
     private readonly HttpClient _httpClient;
+    private readonly bool _isExternalHttpClient;
     private bool _disposed;
 
     /// <summary>
@@ -44,13 +44,13 @@ internal sealed class GoogleTranslationEngine : IDisposable
         ArgumentNullException.ThrowIfNull(httpClient);
 
         _httpClient = httpClient;
-        IsExternalHttpClient = true;
+        _isExternalHttpClient = true;
     }
 
     public GoogleTranslationEngine()
     {
         _httpClient = new();
-        IsExternalHttpClient = false;
+        _isExternalHttpClient = false;
     }
 
     /// <summary>
@@ -210,7 +210,7 @@ internal sealed class GoogleTranslationEngine : IDisposable
     {
         if (!_disposed)
         {
-            if (disposing && !IsExternalHttpClient)
+            if (disposing && !_isExternalHttpClient)
             {
                 _httpClient?.Dispose();
             }
