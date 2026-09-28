@@ -1,8 +1,6 @@
 using GLTranslate.Abstractions.Linguistics.Languages;
 using GLTranslate.Abstractions.Providers;
-using GLTranslate.Domain.Linguistics.Languages;
-using GLTranslate.Domain.Linguistics.Languages.Codes;
-using System.Collections.Immutable;
+using GLTranslate.Providers.Common;
 
 namespace GLTranslate.Providers.Microsoft.Internal;
 
@@ -11,48 +9,38 @@ namespace GLTranslate.Providers.Microsoft.Internal;
 /// language codes the Microsoft Translator endpoint expects.
 /// </summary>
 /// <remarks>
-/// This resolver is provider-specific: it only exists so
-/// <see cref="MicrosoftTranslationProvider"/> can cross the boundary between
-/// the standard-independent domain model and Microsoft's wire format.
+/// This resolver is provider-specific: it holds the places where Microsoft
+/// departs from plain ISO 639-1 and leaves the resolution itself to
+/// <see cref="LanguageCodeResolver"/>.
 /// </remarks>
 internal static class MicrosoftLanguageCodeResolver
 {
-    private static readonly Lazy<ImmutableDictionary<string, LanguageId>> LanguagesByIso6391 = new(BuildIndex);
-
-    // Microsoft does not speak plain ISO 639-1 everywhere. On the way out it
-    // wants its own code for the languages listed here; the plain ISO 639-1
-    // code is used for everything else.
-    private static readonly ImmutableDictionary<string, string> MicrosoftCodeByIso6391 =
-        new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            ["lg"] = "lug",
-            ["no"] = "nb",
-            ["ny"] = "nya",
-            ["rn"] = "run",
-            // Microsoft names the script for languages written in more than one.
-            ["mn"] = "mn-Cyrl",
-            ["sr"] = "sr-Cyrl",
-            ["zh"] = "zh-Hans",
-        }.ToImmutableDictionary();
-
-    // On the way in the endpoint answers with the same codes it accepts, so the
-    // table above is read backwards, plus the script variants it may return for
-    // a language the domain keeps as one.
-    private static readonly ImmutableDictionary<string, string> Iso6391ByMicrosoftCode =
-        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["lug"] = "lg",
-            ["nb"] = "no",
-            ["nn"] = "no",
-            ["nya"] = "ny",
-            ["run"] = "rn",
-            ["mn-Cyrl"] = "mn",
-            ["mn-Mong"] = "mn",
-            ["sr-Cyrl"] = "sr",
-            ["sr-Latn"] = "sr",
-            ["zh-Hans"] = "zh",
-            ["zh-Hant"] = "zh",
-        }.ToImmutableDictionary(StringComparer.OrdinalIgnoreCase);
+    private static readonly LanguageCodeResolver Resolver = new(
+        MicrosoftProvider.Name,
+        [
+            // Microsoft names the script for languages written in more than
+            // one, and uses the ISO 639-3 code for a few.
+            new("lg", "lug"),
+            new("no", "nb"),
+            new("ny", "nya"),
+            new("rn", "run"),
+            new("mn", "mn-Cyrl"),
+            new("sr", "sr-Cyrl"),
+            new("zh", "zh-Hans"),
+        ],
+        [
+            new("lug", "lg"),
+            new("nb", "no"),
+            new("nn", "no"),
+            new("nya", "ny"),
+            new("run", "rn"),
+            new("mn-Cyrl", "mn"),
+            new("mn-Mong", "mn"),
+            new("sr-Cyrl", "sr"),
+            new("sr-Latn", "sr"),
+            new("zh-Hans", "zh"),
+            new("zh-Hant", "zh"),
+        ]);
 
     /// <summary>
     /// Converts a <see cref="LanguageId"/> into the code Microsoft Translator
@@ -73,33 +61,7 @@ internal static class MicrosoftLanguageCodeResolver
     /// </exception>
     public static string ToMicrosoftCode(LanguageId languageId)
     {
-        ArgumentNullException.ThrowIfNull(languageId);
-
-        Language language;
-
-        try
-        {
-            language = LanguageRegistry.Default.Get(languageId);
-        }
-        catch (KeyNotFoundException exception)
-        {
-            throw new ProviderException(
-                MicrosoftProvider.Name,
-                $"Language '{languageId.Value}' is not known to GLTranslate.",
-                exception);
-        }
-
-        if (!language.Codes.TryGetValue(out Iso6391Code? code))
-        {
-            // The language is known to GLTranslate, but it has no ISO 639-1 code.
-            throw new ProviderException(
-                MicrosoftProvider.Name,
-                $"Language '{languageId.Value}' has no ISO 639-1 code, which Microsoft Translator requires.");
-        }
-
-        return MicrosoftCodeByIso6391.TryGetValue(code.Value, out string? microsoftCode)
-            ? microsoftCode
-            : code.Value;
+        return Resolver.ToProviderCode(languageId);
     }
 
     /// <summary>
@@ -122,39 +84,6 @@ internal static class MicrosoftLanguageCodeResolver
     /// </exception>
     public static LanguageId FromMicrosoftCode(string microsoftLanguageCode)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(microsoftLanguageCode);
-
-        string code = microsoftLanguageCode.Trim();
-
-        if (Iso6391ByMicrosoftCode.TryGetValue(code, out string? iso6391))
-        {
-            code = iso6391;
-        }
-
-        if (!LanguagesByIso6391.Value.TryGetValue(code.ToLowerInvariant(), out LanguageId? languageId))
-        {
-            // The endpoint returned a language code that is not known to GLTranslate.
-            throw new ProviderException(
-                MicrosoftProvider.Name,
-                $"Microsoft Translator returned an unknown language code '{microsoftLanguageCode}'.");
-        }
-
-        return languageId;
-    }
-
-    private static ImmutableDictionary<string, LanguageId> BuildIndex()
-    {
-        ImmutableDictionary<string, LanguageId>.Builder index =
-            ImmutableDictionary.CreateBuilder<string, LanguageId>(StringComparer.Ordinal);
-
-        foreach (Language language in LanguageRegistry.Default.All)
-        {
-            if (language.Codes.TryGetValue(out Iso6391Code? code))
-            {
-                index[code.Value] = language.Id;
-            }
-        }
-
-        return index.ToImmutable();
+        return Resolver.FromProviderCode(microsoftLanguageCode);
     }
 }

@@ -1,8 +1,6 @@
 using GLTranslate.Abstractions.Linguistics.Languages;
 using GLTranslate.Abstractions.Providers;
-using GLTranslate.Domain.Linguistics.Languages;
-using GLTranslate.Domain.Linguistics.Languages.Codes;
-using System.Collections.Immutable;
+using GLTranslate.Providers.Common;
 
 namespace GLTranslate.Providers.Yandex.Internal;
 
@@ -11,13 +9,12 @@ namespace GLTranslate.Providers.Yandex.Internal;
 /// language codes the Yandex endpoints expect.
 /// </summary>
 /// <remarks>
-/// This resolver is provider-specific: it only exists so the Yandex providers
-/// can cross the boundary between the standard-independent domain model and
-/// the ISO-639-1-based wire format of the endpoints.
+/// Yandex speaks plain ISO 639-1 throughout, so this resolver adds nothing to
+/// <see cref="LanguageCodeResolver"/> but the name of the provider.
 /// </remarks>
 internal static class YandexLanguageCodeResolver
 {
-    private static readonly Lazy<ImmutableDictionary<string, LanguageId>> LanguagesByIso6391 = new(BuildIndex);
+    private static readonly LanguageCodeResolver Resolver = new(YandexProvider.Name);
 
     /// <summary>
     /// Converts a <see cref="LanguageId"/> into the code the endpoints expect.
@@ -37,31 +34,7 @@ internal static class YandexLanguageCodeResolver
     /// </exception>
     public static string ToYandexCode(LanguageId languageId)
     {
-        ArgumentNullException.ThrowIfNull(languageId);
-
-        Language language;
-
-        try
-        {
-            language = LanguageRegistry.Default.Get(languageId);
-        }
-        catch (KeyNotFoundException exception)
-        {
-            throw new ProviderException(
-                YandexProvider.Name,
-                $"Language '{languageId.Value}' is not known to GLTranslate.",
-                exception);
-        }
-
-        if (!language.Codes.TryGetValue(out Iso6391Code? code))
-        {
-            // The language is known to GLTranslate, but it has no ISO 639-1 code.
-            throw new ProviderException(
-                YandexProvider.Name,
-                $"Language '{languageId.Value}' has no ISO 639-1 code, which Yandex requires.");
-        }
-
-        return code.Value;
+        return Resolver.ToProviderCode(languageId);
     }
 
     /// <summary>
@@ -84,32 +57,6 @@ internal static class YandexLanguageCodeResolver
     /// </exception>
     public static LanguageId FromYandexCode(string yandexLanguageCode)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(yandexLanguageCode);
-
-        if (!LanguagesByIso6391.Value.TryGetValue(yandexLanguageCode.Trim().ToLowerInvariant(), out LanguageId? languageId))
-        {
-            // The endpoint returned a language code that is not known to GLTranslate.
-            throw new ProviderException(
-                YandexProvider.Name,
-                $"Yandex returned an unknown language code '{yandexLanguageCode}'.");
-        }
-
-        return languageId;
-    }
-
-    private static ImmutableDictionary<string, LanguageId> BuildIndex()
-    {
-        ImmutableDictionary<string, LanguageId>.Builder index =
-            ImmutableDictionary.CreateBuilder<string, LanguageId>(StringComparer.Ordinal);
-
-        foreach (Language language in LanguageRegistry.Default.All)
-        {
-            if (language.Codes.TryGetValue(out Iso6391Code? code))
-            {
-                index[code.Value] = language.Id;
-            }
-        }
-
-        return index.ToImmutable();
+        return Resolver.FromProviderCode(yandexLanguageCode);
     }
 }
