@@ -9,4 +9,6 @@ namespace GLTranslate.Providers.Microsoft.Internal;
 /// </summary>
 [JsonSerializable(typeof(MicrosoftTranslationRequest[]))]
 [JsonSerializable(typeof(MicrosoftTranslationResponse[]))]
+[JsonSerializable(typeof(MicrosoftTransliteration[]))]
+[JsonSerializable(typeof(MicrosoftSpeechToken))]
 internal sealed partial class MicrosoftTranslationJsonContext : JsonSerializerContext;
