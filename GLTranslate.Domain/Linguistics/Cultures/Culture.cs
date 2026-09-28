@@ -50,14 +50,30 @@ public sealed class Culture :
     /// <summary>
     /// Initializes a new instance of the <see cref="Culture"/> class.
     /// </summary>
+    /// <param name="id">
+    /// The unique identifier of the culture within GLTranslate.
+    /// </param>
+    /// <param name="language">
+    /// The language represented by the culture.
+    /// </param>
+    /// <param name="region">
+    /// The region associated with the culture, or <see langword="null"/>
+    /// when the culture is not bound to a region.
+    /// </param>
+    /// <param name="script">
+    /// The writing system associated with the culture, or <see langword="null"/>
+    /// when the culture does not name one. When specified, it must be one of
+    /// the writing systems of <paramref name="language"/>.
+    /// </param>
+    /// <param name="codes">
+    /// The culture code representations.
+    /// </param>
     /// <exception cref="ArgumentNullException">
     /// Thrown when <paramref name="id"/>, <paramref name="language"/>, or <paramref name="codes"/> is null.
     /// </exception>
     /// <exception cref="ArgumentException">
-    /// Thrown when <paramref name="codes"/> contains null or duplicate elements.
-    /// </exception>
-    /// <exception cref="InvalidOperationException">
-    /// Thrown when the specified <paramref name="script"/> is not supported by the specified <paramref name="language"/>.
+    /// Thrown when the specified <paramref name="script"/> is not supported by the specified
+    /// <paramref name="language"/>, or when <paramref name="codes"/> contains null or duplicate elements.
     /// </exception>
     internal Culture(
         CultureId id,
