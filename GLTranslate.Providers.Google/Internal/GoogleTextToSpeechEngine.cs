@@ -27,7 +27,6 @@ namespace GLTranslate.Providers.Google.Internal;
 internal sealed class GoogleTextToSpeechEngine
 {
     private const string ApiEndpoint = "https://translate.google.com/translate_tts";
-    private const string ProviderName = "Google";
     private const int MaxChunkLength = 200;
 
     private readonly HttpClient _httpClient;
@@ -135,7 +134,7 @@ internal sealed class GoogleTextToSpeechEngine
         }
         catch (HttpRequestException exception)
         {
-            throw new ProviderException(ProviderName, "The request to Google Translate failed.", exception);
+            throw new ProviderException(GoogleProvider.Name, "The request to Google Translate failed.", exception);
         }
     }
 

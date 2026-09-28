@@ -24,19 +24,16 @@ namespace GLTranslate.Providers.Google;
 public sealed class GoogleTranslationProvider : ITextTranslationProvider, IDisposable
 {
     private readonly GoogleTranslationEngine _engine;
-    private readonly HttpClient? _ownedHttpClient;
 
     /// <inheritdoc/>
-    public string Name => "Google";
+    public string Name => GoogleProvider.Name;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="GoogleTranslationProvider"/>
-    /// class with an internally managed <see cref="HttpClient"/>.
+    /// Initializes a new instance of the <see cref="GoogleTranslationProvider"/> class.
     /// </summary>
     public GoogleTranslationProvider()
     {
-        _ownedHttpClient = new HttpClient();
-        _engine = new GoogleTranslationEngine(_ownedHttpClient);
+        _engine = new GoogleTranslationEngine();
     }
 
     /// <summary>
@@ -88,6 +85,6 @@ public sealed class GoogleTranslationProvider : ITextTranslationProvider, IDispo
     /// <inheritdoc/>
     public void Dispose()
     {
-        _ownedHttpClient?.Dispose();
+        _engine?.Dispose();
     }
 }

@@ -19,7 +19,6 @@ namespace GLTranslate.Providers.Google.Internal;
 internal static class GoogleLanguageCodeResolver
 {
     private const string AutoDetectCode = "auto";
-    private const string ProviderName = "Google";
 
     private static readonly Lazy<ImmutableDictionary<string, LanguageId>> LanguagesByIso6391 = new(BuildIndex);
 
@@ -55,7 +54,7 @@ internal static class GoogleLanguageCodeResolver
         catch (KeyNotFoundException exception)
         {
             throw new ProviderException(
-                ProviderName,
+                GoogleProvider.Name,
                 $"Language '{languageId.Value}' is not known to GLTranslate.",
                 exception);
         }
@@ -64,7 +63,7 @@ internal static class GoogleLanguageCodeResolver
         {
             // The language is known to GLTranslate, but it has no ISO 639-1 code.
             throw new ProviderException(
-                ProviderName,
+                GoogleProvider.Name,
                 $"Language '{languageId.Value}' has no ISO 639-1 code, which Google Translate requires.");
         }
 
@@ -97,7 +96,7 @@ internal static class GoogleLanguageCodeResolver
         {
             // The Google Translate endpoint returned a language code that is not known to GLTranslate.
             throw new ProviderException(
-                ProviderName,
+                GoogleProvider.Name,
                 $"Google Translate returned an unknown language code '{googleLanguageCode}'.");
         }
 
@@ -110,7 +109,7 @@ internal static class GoogleLanguageCodeResolver
     /// <returns>The immutable dictionary mapping ISO 639-1 codes to language identifiers.</returns>
     private static ImmutableDictionary<string, LanguageId> BuildIndex()
     {
-        Dictionary<string, LanguageId> index = [];
+        ImmutableDictionary<string, LanguageId>.Builder index = ImmutableDictionary.CreateBuilder<string, LanguageId>();
 
         foreach (Language language in LanguageRegistry.Default.All)
         {

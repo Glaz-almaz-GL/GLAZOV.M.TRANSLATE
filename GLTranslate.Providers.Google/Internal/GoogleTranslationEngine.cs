@@ -21,12 +21,13 @@ namespace GLTranslate.Providers.Google.Internal;
 /// otherwise mutated after construction.
 /// </para>
 /// </remarks>
-internal sealed class GoogleTranslationEngine
+internal sealed class GoogleTranslationEngine : IDisposable
 {
     private const string ApiEndpoint = "https://translate.googleapis.com/translate_a/single";
-    private const string ProviderName = "Google";
+    private readonly bool IsExternalHttpClient;
 
     private readonly HttpClient _httpClient;
+    private bool _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GoogleTranslationEngine"/> class.
@@ -43,6 +44,13 @@ internal sealed class GoogleTranslationEngine
         ArgumentNullException.ThrowIfNull(httpClient);
 
         _httpClient = httpClient;
+        IsExternalHttpClient = true;
+    }
+
+    public GoogleTranslationEngine()
+    {
+        _httpClient = new();
+        IsExternalHttpClient = false;
     }
 
     /// <summary>
@@ -186,15 +194,34 @@ internal sealed class GoogleTranslationEngine
             return await httpResponse.Content
                 .ReadFromJsonAsync(GoogleTranslationJsonContext.Default.GoogleTranslationResponse, cancellationToken)
                 .ConfigureAwait(false)
-                ?? throw new ProviderException(ProviderName, "Google Translate returned an empty response.");
+                ?? throw new ProviderException(GoogleProvider.Name, "Google Translate returned an empty response.");
         }
         catch (HttpRequestException exception)
         {
-            throw new ProviderException(ProviderName, "The request to Google Translate failed.", exception);
+            throw new ProviderException(GoogleProvider.Name, "The request to Google Translate failed.", exception);
         }
         catch (JsonException exception)
         {
-            throw new ProviderException(ProviderName, "Google Translate returned an unexpected response format.", exception);
+            throw new ProviderException(GoogleProvider.Name, "Google Translate returned an unexpected response format.", exception);
         }
+    }
+
+    private void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing && !IsExternalHttpClient)
+            {
+                _httpClient?.Dispose();
+            }
+
+            _disposed = true;
+        }
+    }
+
+    public void Dispose()
+    {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

@@ -29,7 +29,7 @@ public sealed class GoogleTextToSpeechProvider : ITextToSpeechProvider, IDisposa
     private readonly HttpClient? _ownedHttpClient;
 
     /// <inheritdoc/>
-    public string Name => "Google";
+    public string Name => GoogleProvider.Name;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GoogleTextToSpeechProvider"/>
