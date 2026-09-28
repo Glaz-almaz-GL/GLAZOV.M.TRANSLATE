@@ -33,7 +33,7 @@ internal static class Program
 
         string path = Path.Combine(ProviderRoot, "Internal", "MicrosoftVoices.g.cs");
 
-        File.WriteAllText(path, Generate(defaults), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        await File.WriteAllTextAsync(path, Generate(defaults), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 
         Console.WriteLine($"{voices.Length} voices, {defaults.Count} languages -> {path}");
     }

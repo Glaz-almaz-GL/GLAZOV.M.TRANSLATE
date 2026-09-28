@@ -10,5 +10,6 @@
   <Project Path="GLTranslate.Providers.Microsoft.Tests/GLTranslate.Providers.Microsoft.Tests.csproj" />
   <Project Path="GLTranslate.Providers.Google.Tests/GLTranslate.Providers.Google.Tests.csproj" />
   <Project Path="tools/GLTranslate.Domain.Generator/GLTranslate.Domain.Generator.csproj" />
+  <Project Path="tools/GLTranslate.Providers.Google.Generator/GLTranslate.Providers.Google.Generator.csproj" />
   <Project Path="tools/GLTranslate.Providers.Microsoft.Generator/GLTranslate.Providers.Microsoft.Generator.csproj" />
 </Solution>

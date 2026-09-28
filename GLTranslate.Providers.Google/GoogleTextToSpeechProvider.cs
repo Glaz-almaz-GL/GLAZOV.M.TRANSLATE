@@ -1,5 +1,8 @@
+using GLTranslate.Abstractions.Linguistics.Languages;
 using GLTranslate.Abstractions.Providers;
 using GLTranslate.Abstractions.TextToSpeech;
+using GLTranslate.Domain.Linguistics.Languages;
+using GLTranslate.Domain.Linguistics.Languages.Codes;
 using GLTranslate.Providers.Google.Internal;
 
 namespace GLTranslate.Providers.Google;
@@ -61,9 +64,9 @@ public sealed class GoogleTextToSpeechProvider : ITextToSpeechProvider, IDisposa
 
     /// <inheritdoc/>
     /// <exception cref="ProviderException">
-    /// Thrown when <paramref name="request"/> specifies a language unknown
-    /// to GLTranslate, or when the underlying request to Google Translate
-    /// fails.
+    /// Thrown when <paramref name="request"/> names a voice, when it specifies
+    /// a language unknown to GLTranslate or one Google Translate cannot speak,
+    /// or when the underlying request to Google Translate fails.
     /// </exception>
     public async Task<TextToSpeechResult> ExecuteAsync(TextToSpeechRequest request, CancellationToken cancellationToken = default)
     {
@@ -78,6 +81,8 @@ public sealed class GoogleTextToSpeechProvider : ITextToSpeechProvider, IDisposa
                 "Google Translate offers no choice of voice: leave the voice of the request unset.");
         }
 
+        EnsureSpoken(request.LanguageId);
+
         string languageCode = GoogleLanguageCodeResolver.ToGoogleCode(request.LanguageId);
 
         byte[] audioData = await _engine
@@ -85,6 +90,32 @@ public sealed class GoogleTextToSpeechProvider : ITextToSpeechProvider, IDisposa
             .ConfigureAwait(false);
 
         return new TextToSpeechResult(request.Id, audioData, Mp3ContentType, request.LanguageId);
+    }
+
+    private static void EnsureSpoken(LanguageId languageId)
+    {
+        Language language;
+
+        try
+        {
+            language = LanguageRegistry.Default.Get(languageId);
+        }
+        catch (KeyNotFoundException exception)
+        {
+            throw new ProviderException(
+                GoogleProvider.Name,
+                $"Language '{languageId.Value}' is not known to GLTranslate.",
+                exception);
+        }
+
+        // The endpoint answers 400 Bad Request to a language it cannot speak,
+        // which reaches the caller as a failed request and explains nothing.
+        if (!language.Codes.TryGetValue(out Iso6391Code? code) || !GoogleSpeechLanguages.Contains(code.Value))
+        {
+            throw new ProviderException(
+                GoogleProvider.Name,
+                $"Google Translate cannot speak language '{languageId.Value}'.");
+        }
     }
 
     /// <inheritdoc/>
