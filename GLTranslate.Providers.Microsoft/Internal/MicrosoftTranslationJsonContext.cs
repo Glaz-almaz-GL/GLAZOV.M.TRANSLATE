@@ -1,0 +1,12 @@
+using System.Text.Json.Serialization;
+
+namespace GLTranslate.Providers.Microsoft.Internal;
+
+/// <summary>
+/// Provides source-generated JSON (de)serialization metadata for the
+/// Microsoft Translator models, avoiding reflection-based serialization
+/// at runtime.
+/// </summary>
+[JsonSerializable(typeof(MicrosoftTranslationRequest[]))]
+[JsonSerializable(typeof(MicrosoftTranslationResponse[]))]
+internal sealed partial class MicrosoftTranslationJsonContext : JsonSerializerContext;
