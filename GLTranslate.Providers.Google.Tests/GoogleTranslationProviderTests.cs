@@ -89,7 +89,7 @@ public sealed class GoogleTranslationProviderTests
         Assert.Null(exception);
     }
 
-    [Fact]
+    [LiveFact]
     public async Task ExecuteAsync_LiveGoogleTranslate_TranslatesText()
     {
         using GoogleTranslationProvider provider = new();
