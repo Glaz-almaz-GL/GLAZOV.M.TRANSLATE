@@ -85,8 +85,8 @@ internal sealed class MicrosoftTextToSpeechEngine : IDisposable
     /// <param name="text">
     /// The text to speak.
     /// </param>
-    /// <param name="voice">
-    /// The voice to speak it with.
+    /// <param name="voiceName">
+    /// The name of the voice to speak it with.
     /// </param>
     /// <param name="cancellationToken">
     /// A token that can be used to cancel the operation.
@@ -107,7 +107,7 @@ internal sealed class MicrosoftTextToSpeechEngine : IDisposable
     /// </exception>
     public async Task<byte[]> SynthesizeAsync(
         string text,
-        MicrosoftVoice voice,
+        string voiceName,
         CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -122,7 +122,7 @@ internal sealed class MicrosoftTextToSpeechEngine : IDisposable
 
         (string token, string region) = await GetTokenAsync(cancellationToken).ConfigureAwait(false);
 
-        string ssml = BuildSsml(text, voice);
+        string ssml = BuildSsml(text, voiceName);
 
         using HttpRequestMessage httpRequest = new(
             HttpMethod.Post,
@@ -162,12 +162,16 @@ internal sealed class MicrosoftTextToSpeechEngine : IDisposable
         }
     }
 
-    private static string BuildSsml(string text, MicrosoftVoice voice)
+    private static string BuildSsml(string text, string voiceName)
     {
         const char Quote = '\'';
 
-        return $"<speak version={Quote}1.0{Quote} xml:lang={Quote}{voice.Locale}{Quote}>" +
-               $"<voice xml:lang={Quote}{voice.Locale}{Quote} xml:gender={Quote}{voice.Gender}{Quote} name={Quote}{voice.ShortName}{Quote}>" +
+        // The endpoint needs the name of the voice; the locale it belongs to is
+        // the beginning of that name, and the gender it infers from the voice.
+        string locale = MicrosoftVoices.GetLocale(voiceName);
+
+        return $"<speak version={Quote}1.0{Quote} xml:lang={Quote}{locale}{Quote}>" +
+               $"<voice name={Quote}{voiceName}{Quote}>" +
                SsmlEncoder.Encode(text) +
                "</voice></speak>";
     }

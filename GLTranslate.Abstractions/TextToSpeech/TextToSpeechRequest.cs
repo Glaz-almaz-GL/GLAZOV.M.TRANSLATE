@@ -24,6 +24,17 @@ public sealed class TextToSpeechRequest : ProviderRequest
     public LanguageId LanguageId { get; }
 
     /// <summary>
+    /// Gets the voice to speak with, or <see langword="null"/> to let the
+    /// provider choose the voice of the language.
+    /// </summary>
+    /// <remarks>
+    /// The name belongs to the provider that speaks it. A provider that
+    /// offers no choice of voice refuses a request that names one rather
+    /// than speaking with a different voice than was asked for.
+    /// </remarks>
+    public VoiceName? VoiceName { get; }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="TextToSpeechRequest"/> class.
     /// </summary>
     /// <param name="text">
@@ -32,6 +43,10 @@ public sealed class TextToSpeechRequest : ProviderRequest
     /// <param name="languageId">
     /// The identifier of the language the text is written in.
     /// </param>
+    /// <param name="voiceName">
+    /// The voice to speak with, or <see langword="null"/> to let the provider
+    /// choose the voice of the language.
+    /// </param>
     /// <param name="id">
     /// The request identifier, or <see langword="null"/> to generate a new one.
     /// </param>
@@ -39,7 +54,11 @@ public sealed class TextToSpeechRequest : ProviderRequest
     /// Thrown when <paramref name="text"/> or <paramref name="languageId"/>
     /// is <see langword="null"/>.
     /// </exception>
-    public TextToSpeechRequest(ProviderText text, LanguageId languageId, RequestId? id = null)
+    public TextToSpeechRequest(
+        ProviderText text,
+        LanguageId languageId,
+        VoiceName? voiceName = null,
+        RequestId? id = null)
         : base(id)
     {
         ArgumentNullException.ThrowIfNull(text);
@@ -47,5 +66,6 @@ public sealed class TextToSpeechRequest : ProviderRequest
 
         Text = text;
         LanguageId = languageId;
+        VoiceName = voiceName;
     }
 }

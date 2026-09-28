@@ -71,4 +71,19 @@ public sealed class GoogleTextToSpeechProviderTests
 
         Assert.Null(exception);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_NamedVoice_ThrowsProviderException()
+    {
+        using GoogleTextToSpeechProvider provider = new(new HttpClient());
+
+        TextToSpeechRequest request = new(
+            new ProviderText("Good morning"),
+            new LanguageId("english"),
+            new VoiceName("en-US-AvaNeural"));
+
+        ProviderException exception = await Assert.ThrowsAsync<ProviderException>(() => provider.ExecuteAsync(request));
+
+        Assert.Contains("offers no choice of voice", exception.Message, StringComparison.Ordinal);
+    }
 }

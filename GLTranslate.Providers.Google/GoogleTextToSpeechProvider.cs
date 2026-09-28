@@ -69,6 +69,15 @@ public sealed class GoogleTextToSpeechProvider : ITextToSpeechProvider, IDisposa
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        if (request.VoiceName is not null)
+        {
+            // Google speaks one voice per language and offers no choice, so a
+            // named voice is refused rather than silently ignored.
+            throw new ProviderException(
+                GoogleProvider.Name,
+                "Google Translate offers no choice of voice: leave the voice of the request unset.");
+        }
+
         string languageCode = GoogleLanguageCodeResolver.ToGoogleCode(request.LanguageId);
 
         byte[] audioData = await _engine

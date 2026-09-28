@@ -69,16 +69,18 @@ public sealed class MicrosoftTextToSpeechProvider : ITextToSpeechProvider, IDisp
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        MicrosoftVoice voice = ResolveVoice(request.LanguageId);
+        // A named voice is passed through as it is: only the endpoint knows
+        // every voice it has, and it refuses a name it does not know.
+        string voiceName = request.VoiceName?.Value ?? ResolveDefaultVoice(request.LanguageId);
 
         byte[] audio = await _engine
-            .SynthesizeAsync(request.Text.Value, voice, cancellationToken)
+            .SynthesizeAsync(request.Text.Value, voiceName, cancellationToken)
             .ConfigureAwait(false);
 
         return new TextToSpeechResult(request.Id, audio, Mp3ContentType, request.LanguageId);
     }
 
-    private static MicrosoftVoice ResolveVoice(Abstractions.Linguistics.Languages.LanguageId languageId)
+    private static string ResolveDefaultVoice(Abstractions.Linguistics.Languages.LanguageId languageId)
     {
         Language language;
 
@@ -101,14 +103,14 @@ public sealed class MicrosoftTextToSpeechProvider : ITextToSpeechProvider, IDisp
                 $"Language '{languageId.Value}' has no ISO 639-1 code, which Microsoft Translator requires.");
         }
 
-        if (!MicrosoftVoices.TryGet(code.Value, out MicrosoftVoice voice))
+        if (!MicrosoftVoices.TryGetDefault(code.Value, out string voiceName))
         {
             throw new ProviderException(
                 MicrosoftProvider.Name,
                 $"Microsoft Translator has no voice for language '{languageId.Value}'.");
         }
 
-        return voice;
+        return voiceName;
     }
 
     /// <inheritdoc/>

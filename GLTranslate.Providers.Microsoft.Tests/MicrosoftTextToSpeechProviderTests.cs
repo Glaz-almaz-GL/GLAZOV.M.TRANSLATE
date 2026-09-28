@@ -89,7 +89,7 @@ public sealed class MicrosoftTextToSpeechProviderTests
 
         Assert.Equal("westeurope.tts.speech.microsoft.com", host);
         Assert.Equal("the-token", token);
-        Assert.Contains("ru-RU-DariyaNeural", ssml!, StringComparison.Ordinal);
+        Assert.Contains("ru-RU-SvetlanaNeural", ssml!, StringComparison.Ordinal);
         Assert.Contains("Доброе утро", ssml!, StringComparison.Ordinal);
     }
 

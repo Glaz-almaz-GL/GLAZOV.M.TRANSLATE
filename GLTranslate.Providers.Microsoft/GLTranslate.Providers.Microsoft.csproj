@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="GLTranslate.Providers.Microsoft.Tests" />
+    <InternalsVisibleTo Include="GLTranslate.Providers.Microsoft.Generator" />
   </ItemGroup>
 
 </Project>
