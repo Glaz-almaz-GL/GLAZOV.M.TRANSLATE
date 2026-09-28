@@ -42,11 +42,6 @@ public sealed class Language :
     public string NativeName { get; }
 
     /// <summary>
-    /// Gets the writing direction.
-    /// </summary>
-    public LanguageDirection Direction { get; }
-
-    /// <summary>
     /// Gets the set of all code representations associated with this language.
     /// </summary>
     public CodeSet<LanguageCode> Codes { get; }
@@ -72,9 +67,6 @@ public sealed class Language :
     /// <param name="nativeName">
     /// The native language name.
     /// </param>
-    /// <param name="direction">
-    /// The writing direction.
-    /// </param>
     /// <param name="scripts">
     /// The supported writing systems.
     /// </param>
@@ -93,7 +85,6 @@ public sealed class Language :
         LanguageId id,
         string name,
         string nativeName,
-        LanguageDirection direction,
         IEnumerable<Script> scripts,
         IEnumerable<LanguageCode> codes)
     {
@@ -106,7 +97,6 @@ public sealed class Language :
         Id = id;
         Name = name;
         NativeName = nativeName;
-        Direction = direction;
 
         Scripts = new EntitySet<Script, ScriptId>(scripts);
         Codes = new CodeSet<LanguageCode>(codes);

@@ -31,6 +31,11 @@ public sealed class Script :
     public string NativeName { get; }
 
     /// <summary>
+    /// Gets the direction in which the writing system is written.
+    /// </summary>
+    public WritingDirection Direction { get; }
+
+    /// <summary>
     /// Gets the set of all code representations associated with this writing system.
     /// </summary>
     public CodeSet<ScriptCode> Codes { get; }
@@ -42,6 +47,21 @@ public sealed class Script :
     /// <summary>
     /// Initializes a new instance of the <see cref="Script"/> class.
     /// </summary>
+    /// <param name="id">
+    /// The unique identifier of the writing system.
+    /// </param>
+    /// <param name="name">
+    /// The English name of the writing system.
+    /// </param>
+    /// <param name="nativeName">
+    /// The native name of the writing system.
+    /// </param>
+    /// <param name="direction">
+    /// The direction in which the writing system is written.
+    /// </param>
+    /// <param name="codes">
+    /// The writing system code representations.
+    /// </param>
     /// <exception cref="ArgumentNullException">
     /// Thrown when <paramref name="id"/> or <paramref name="codes"/> is null.
     /// </exception>
@@ -53,6 +73,7 @@ public sealed class Script :
         ScriptId id,
         string name,
         string nativeName,
+        WritingDirection direction,
         IEnumerable<ScriptCode> codes)
     {
         ArgumentNullException.ThrowIfNull(id);
@@ -68,6 +89,7 @@ public sealed class Script :
         Id = id;
         Name = name;
         NativeName = nativeName;
+        Direction = direction;
         Codes = new CodeSet<ScriptCode>(codes);
     }
 

@@ -29,6 +29,8 @@ internal static class Program
         ["ar"] = ["Arab"], ["fa"] = ["Arab"], ["ur"] = ["Arab"], ["ps"] = ["Arab"],
         ["sd"] = ["Arab"], ["ug"] = ["Arab"],
         ["he"] = ["Hebr"], ["yi"] = ["Hebr"],
+        ["dv"] = ["Thaa"],
+        ["ks"] = ["Arab", "Deva"],
         ["hi"] = ["Deva"], ["mr"] = ["Deva"], ["ne"] = ["Deva"], ["sa"] = ["Deva"],
         ["bn"] = ["Beng"], ["as"] = ["Beng"],
         ["pa"] = ["Guru", "Arab"],
@@ -52,36 +54,37 @@ internal static class Program
         ["el"] = ["Grek"],
     };
 
-    // Curated: ISO 15924 script code -> (English name, native name).
+    // Curated: ISO 15924 script code -> (English name, native name, right-to-left flag).
     // Only scripts actually referenced by LanguageScripts need an entry here.
-    private static readonly Dictionary<string, (string Name, string NativeName)> ScriptNames = new()
+    private static readonly Dictionary<string, (string Name, string NativeName, bool Rtl)> ScriptNames = new()
     {
-        ["Latn"] = ("Latin", "Latin"),
-        ["Cyrl"] = ("Cyrillic", "Кириллица"),
-        ["Arab"] = ("Arabic", "العربية"),
-        ["Hebr"] = ("Hebrew", "עברית"),
-        ["Deva"] = ("Devanagari", "देवनागरी"),
-        ["Beng"] = ("Bengali", "বাংলা"),
-        ["Guru"] = ("Gurmukhi", "ਗੁਰਮੁਖੀ"),
-        ["Gujr"] = ("Gujarati", "ગુજરાતી"),
-        ["Orya"] = ("Oriya", "ଓଡ଼ିଆ"),
-        ["Taml"] = ("Tamil", "தமிழ்"),
-        ["Telu"] = ("Telugu", "తెలుగు"),
-        ["Knda"] = ("Kannada", "ಕನ್ನಡ"),
-        ["Mlym"] = ("Malayalam", "മലയാളം"),
-        ["Sinh"] = ("Sinhala", "සිංහල"),
-        ["Thai"] = ("Thai", "ไทย"),
-        ["Laoo"] = ("Lao", "ລາວ"),
-        ["Tibt"] = ("Tibetan", "བོད་ཡིག"),
-        ["Mymr"] = ("Myanmar", "မြန်မာ"),
-        ["Geor"] = ("Georgian", "ქართული"),
-        ["Armn"] = ("Armenian", "Հայերեն"),
-        ["Ethi"] = ("Ethiopic", "ግዕዝ"),
-        ["Hans"] = ("Han (Simplified)", "简体"),
-        ["Hant"] = ("Han (Traditional)", "繁體"),
-        ["Jpan"] = ("Japanese", "日本語"),
-        ["Hang"] = ("Hangul", "한글"),
-        ["Grek"] = ("Greek", "Ελληνικά"),
+        ["Latn"] = ("Latin", "Latin", false),
+        ["Cyrl"] = ("Cyrillic", "Кириллица", false),
+        ["Arab"] = ("Arabic", "العربية", true),
+        ["Hebr"] = ("Hebrew", "עברית", true),
+        ["Thaa"] = ("Thaana", "ތާނަ", true),
+        ["Deva"] = ("Devanagari", "देवनागरी", false),
+        ["Beng"] = ("Bengali", "বাংলা", false),
+        ["Guru"] = ("Gurmukhi", "ਗੁਰਮੁਖੀ", false),
+        ["Gujr"] = ("Gujarati", "ગુજરાતી", false),
+        ["Orya"] = ("Oriya", "ଓଡ଼ିଆ", false),
+        ["Taml"] = ("Tamil", "தமிழ்", false),
+        ["Telu"] = ("Telugu", "తెలుగు", false),
+        ["Knda"] = ("Kannada", "ಕನ್ನಡ", false),
+        ["Mlym"] = ("Malayalam", "മലയാളം", false),
+        ["Sinh"] = ("Sinhala", "සිංහල", false),
+        ["Thai"] = ("Thai", "ไทย", false),
+        ["Laoo"] = ("Lao", "ລາວ", false),
+        ["Tibt"] = ("Tibetan", "བོད་ཡིག", false),
+        ["Mymr"] = ("Myanmar", "မြန်မာ", false),
+        ["Geor"] = ("Georgian", "ქართული", false),
+        ["Armn"] = ("Armenian", "Հայերեն", false),
+        ["Ethi"] = ("Ethiopic", "ግዕዝ", false),
+        ["Hans"] = ("Han (Simplified)", "简体", false),
+        ["Hant"] = ("Han (Traditional)", "繁體", false),
+        ["Jpan"] = ("Japanese", "日本語", false),
+        ["Hang"] = ("Hangul", "한글", false),
+        ["Grek"] = ("Greek", "Ελληνικά", false),
     };
 
     // Curated: ISO 3166-1 alpha-2 code -> ISO 3166-1 numeric code. Not exposed by
@@ -180,9 +183,9 @@ internal static class Program
                            $"{regions.Count} regions, {cultures.Count} cultures.");
     }
 
-    private sealed record ScriptEntry(string Id, string Code, string Name, string NativeName);
+    private sealed record ScriptEntry(string Id, string Code, string Name, string NativeName, bool Rtl);
 
-    private sealed record LanguageEntry(string Id, string Iso1, string? Iso2, string Name, string NativeName, bool Rtl, string[] ScriptCodes);
+    private sealed record LanguageEntry(string Id, string Iso1, string? Iso2, string Name, string NativeName, string[] ScriptCodes);
 
     private sealed record RegionEntry(string Id, string Alpha2, string Alpha3, string? Numeric, string Name);
 
@@ -193,7 +196,7 @@ internal static class Program
         HashSet<string> usedIds = [];
 
         return [.. ScriptNames
-            .Select(kv => new ScriptEntry(UniqueSlug(kv.Value.Name, kv.Key, usedIds), kv.Key, kv.Value.Name, kv.Value.NativeName))
+            .Select(kv => new ScriptEntry(UniqueSlug(kv.Value.Name, kv.Key, usedIds), kv.Key, kv.Value.Name, kv.Value.NativeName, kv.Value.Rtl))
             .OrderBy(x => x.Code, StringComparer.Ordinal)];
     }
 
@@ -234,7 +237,6 @@ internal static class Program
                 iso2,
                 culture.EnglishName,
                 culture.NativeName,
-                culture.TextInfo.IsRightToLeft,
                 scriptCodes);
         }
 
@@ -363,7 +365,9 @@ internal static class Program
 
         foreach (ScriptEntry s in scripts)
         {
-            sb.AppendLine($"        new Script(new ScriptId({Lit(s.Id)}), {Lit(s.Name)}, {Lit(s.NativeName)}, [new Iso15924Code({Lit(s.Code)})]),");
+            string direction = s.Rtl ? "WritingDirection.RightToLeft" : "WritingDirection.LeftToRight";
+
+            sb.AppendLine($"        new Script(new ScriptId({Lit(s.Id)}), {Lit(s.Name)}, {Lit(s.NativeName)}, {direction}, [new Iso15924Code({Lit(s.Code)})]),");
         }
 
         sb.AppendLine("    ];");
@@ -424,7 +428,6 @@ internal static class Program
 
         foreach (LanguageEntry l in languages)
         {
-            string direction = l.Rtl ? "LanguageDirection.RightToLeft" : "LanguageDirection.LeftToRight";
             string scriptRefs = string.Join(", ", l.ScriptCodes.Select(c => $"ScriptRegistryData.ByCode[{Lit(c)}]"));
 
             // ISO 639-3 is not exposed by the BCL. For languages that already have an
@@ -433,7 +436,7 @@ internal static class Program
                 ? $"[new Iso6391Code({Lit(l.Iso1)})]"
                 : $"[new Iso6391Code({Lit(l.Iso1)}), new Iso6392Code({Lit(l.Iso2)}), new Iso6393Code({Lit(l.Iso2)})]";
 
-            sb.AppendLine($"        new Language(new LanguageId({Lit(l.Id)}), {Lit(l.Name)}, {Lit(l.NativeName)}, {direction}, [{scriptRefs}], {codes}),");
+            sb.AppendLine($"        new Language(new LanguageId({Lit(l.Id)}), {Lit(l.Name)}, {Lit(l.NativeName)}, [{scriptRefs}], {codes}),");
         }
 
         sb.AppendLine("    ];");
@@ -441,7 +444,7 @@ internal static class Program
         sb.AppendLine("    // Keyed by raw ISO 639-1 code (e.g. \"ru\"), used to wire up cross-references");
         sb.AppendLine("    // during generation. Not the same as the domain Id (see Language.Id).");
         sb.AppendLine("    public static readonly ImmutableDictionary<string, Language> ByIso1 =");
-        sb.AppendLine("        All.ToImmutableDictionary(x => x.Сodes.Get<Iso6391Code>().Value, x => x);");
+        sb.AppendLine("        All.ToImmutableDictionary(x => x.Codes.Get<Iso6391Code>().Value, x => x);");
         sb.AppendLine("}");
 
         return sb.ToString();

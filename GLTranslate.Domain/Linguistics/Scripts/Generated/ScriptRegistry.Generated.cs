@@ -81,6 +81,9 @@ public sealed partial class ScriptRegistry
     /// <summary>Gets the Telugu script.</summary>
     public Script Telugu => Get(new ScriptId("telugu"));
 
+    /// <summary>Gets the Thaana script.</summary>
+    public Script Thaana => Get(new ScriptId("thaana"));
+
     /// <summary>Gets the Thai script.</summary>
     public Script Thai => Get(new ScriptId("thai"));
 
