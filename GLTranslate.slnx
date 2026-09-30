@@ -6,6 +6,10 @@
   <Project Path="GLTranslate.Domain/GLTranslate.Domain.csproj" Id="908253e2-7d5d-4e92-bd07-3446e17da2a0" />
   <Project Path="GLTranslate.Domain.Tests/GLTranslate.Domain.Tests.csproj" />
   <Project Path="GLTranslate.Providers.Common/GLTranslate.Providers.Common.csproj" />
+  <Project Path="GLTranslate.Providers.Baidu/GLTranslate.Providers.Baidu.csproj" />
+  <Project Path="GLTranslate.Providers.Baidu.Tests/GLTranslate.Providers.Baidu.Tests.csproj" />
+  <Project Path="GLTranslate.Providers.GoogleCloud/GLTranslate.Providers.GoogleCloud.csproj" />
+  <Project Path="GLTranslate.Providers.GoogleCloud.Tests/GLTranslate.Providers.GoogleCloud.Tests.csproj" />
   <Project Path="GLTranslate.Providers.Bing/GLTranslate.Providers.Bing.csproj" />
   <Project Path="GLTranslate.Providers.Bing.Tests/GLTranslate.Providers.Bing.Tests.csproj" />
   <Project Path="GLTranslate.Providers.Google/GLTranslate.Providers.Google.csproj" />
