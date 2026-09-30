@@ -26,8 +26,6 @@ namespace GLTranslate.Providers.Google;
 /// </remarks>
 public sealed class GoogleTextToSpeechProvider : ITextToSpeechProvider, IDisposable
 {
-    private static readonly AudioContentType Mp3ContentType = new("audio/mpeg");
-
     private readonly GoogleTextToSpeechEngine _engine;
 
     /// <inheritdoc/>
@@ -87,7 +85,7 @@ public sealed class GoogleTextToSpeechProvider : ITextToSpeechProvider, IDisposa
             .SynthesizeAsync(request.Text.Value, languageCode, cancellationToken)
             .ConfigureAwait(false);
 
-        return new TextToSpeechResult(request.Id, audioData, Mp3ContentType, request.LanguageId);
+        return new TextToSpeechResult(request.Id, audioData, AudioContentType.Mp3, request.LanguageId);
     }
 
     private static void EnsureSpoken(LanguageId languageId)

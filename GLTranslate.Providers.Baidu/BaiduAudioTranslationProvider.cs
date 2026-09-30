@@ -32,8 +32,6 @@ namespace GLTranslate.Providers.Baidu;
 /// </remarks>
 public sealed class BaiduAudioTranslationProvider : IAudioTranslationProvider, IDisposable
 {
-    private static readonly AudioContentType Mp3ContentType = new("audio/mpeg");
-
     private readonly BaiduAudioEngine _engine;
 
     /// <inheritdoc/>
@@ -107,7 +105,7 @@ public sealed class BaiduAudioTranslationProvider : IAudioTranslationProvider, I
 
         SpokenTranslation? speech = string.IsNullOrWhiteSpace(data.TargetSpeech)
             ? null
-            : new SpokenTranslation(ReadSpeech(data.TargetSpeech), Mp3ContentType);
+            : new SpokenTranslation(ReadSpeech(data.TargetSpeech), AudioContentType.Mp3);
 
         return new AudioTranslationResult(
             request.Id,

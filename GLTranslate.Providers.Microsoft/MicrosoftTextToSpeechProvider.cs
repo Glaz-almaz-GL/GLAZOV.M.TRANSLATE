@@ -22,8 +22,6 @@ namespace GLTranslate.Providers.Microsoft;
 /// </remarks>
 public sealed class MicrosoftTextToSpeechProvider : ITextToSpeechProvider, IDisposable
 {
-    private static readonly AudioContentType Mp3ContentType = new("audio/mpeg");
-
     private readonly MicrosoftTextToSpeechEngine _engine;
 
     /// <inheritdoc/>
@@ -77,7 +75,7 @@ public sealed class MicrosoftTextToSpeechProvider : ITextToSpeechProvider, IDisp
             .SynthesizeAsync(request.Text.Value, voiceName, cancellationToken)
             .ConfigureAwait(false);
 
-        return new TextToSpeechResult(request.Id, audio, Mp3ContentType, request.LanguageId);
+        return new TextToSpeechResult(request.Id, audio, AudioContentType.Mp3, request.LanguageId);
     }
 
     private static string ResolveDefaultVoice(Abstractions.Linguistics.Languages.LanguageId languageId)

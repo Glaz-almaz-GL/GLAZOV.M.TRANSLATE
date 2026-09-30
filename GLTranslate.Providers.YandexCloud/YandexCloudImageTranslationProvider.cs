@@ -124,21 +124,7 @@ public sealed class YandexCloudImageTranslationProvider : ImageTranslationProvid
 
     private static TextBounds ToBounds(YandexCloudPolygon? polygon)
     {
-        IReadOnlyList<YandexCloudVertex> vertices = polygon?.Vertices ?? [];
-
-        if (vertices.Count == 0)
-        {
-            return default;
-        }
-
-        int left = vertices.Min(vertex => vertex.X);
-        int top = vertices.Min(vertex => vertex.Y);
-
-        return new TextBounds(
-            left,
-            top,
-            vertices.Max(vertex => vertex.X) - left,
-            vertices.Max(vertex => vertex.Y) - top);
+        return TextBounds.Enclosing((polygon?.Vertices ?? []).Select(vertex => (vertex.X, vertex.Y)));
     }
 
     /// <inheritdoc/>

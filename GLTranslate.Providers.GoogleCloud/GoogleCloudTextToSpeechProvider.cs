@@ -27,8 +27,6 @@ namespace GLTranslate.Providers.GoogleCloud;
 /// </remarks>
 public sealed class GoogleCloudTextToSpeechProvider : ITextToSpeechProvider, IDisposable
 {
-    private static readonly AudioContentType Mp3ContentType = new("audio/mpeg");
-
     private readonly GoogleCloudEngine _engine;
 
     /// <inheritdoc/>
@@ -92,7 +90,7 @@ public sealed class GoogleCloudTextToSpeechProvider : ITextToSpeechProvider, IDi
             .SynthesizeAsync(request.Text.Value, languageCode, request.VoiceName?.Value, cancellationToken)
             .ConfigureAwait(false);
 
-        return new TextToSpeechResult(request.Id, audio, Mp3ContentType, request.LanguageId);
+        return new TextToSpeechResult(request.Id, audio, AudioContentType.Mp3, request.LanguageId);
     }
 
     private static string LanguageOfVoice(string voiceName)

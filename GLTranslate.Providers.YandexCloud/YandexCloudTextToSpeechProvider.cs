@@ -28,8 +28,6 @@ namespace GLTranslate.Providers.YandexCloud;
 /// </remarks>
 public sealed class YandexCloudTextToSpeechProvider : ITextToSpeechProvider, IDisposable
 {
-    private static readonly AudioContentType Mp3ContentType = new("audio/mpeg");
-
     private readonly YandexCloudEngine _engine;
 
     /// <inheritdoc/>
@@ -97,7 +95,7 @@ public sealed class YandexCloudTextToSpeechProvider : ITextToSpeechProvider, IDi
             .SynthesizeAsync(request.Text.Value, language, request.VoiceName?.Value ?? defaultVoice, cancellationToken)
             .ConfigureAwait(false);
 
-        return new TextToSpeechResult(request.Id, audio, Mp3ContentType, request.LanguageId);
+        return new TextToSpeechResult(request.Id, audio, AudioContentType.Mp3, request.LanguageId);
     }
 
     /// <inheritdoc/>
