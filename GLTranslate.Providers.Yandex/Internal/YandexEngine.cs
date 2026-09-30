@@ -212,6 +212,73 @@ internal sealed class YandexEngine : ProviderEngine
     }
 
     /// <summary>
+    /// Translates the specified markup, leaving its tags where they are.
+    /// </summary>
+    /// <param name="markup">
+    /// The markup to translate.
+    /// </param>
+    /// <param name="targetLanguageCode">
+    /// The language code to translate into.
+    /// </param>
+    /// <param name="sourceLanguageCode">
+    /// The language code the markup is written in, or <see langword="null"/>
+    /// to let the endpoint detect it.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token that can be used to cancel the operation.
+    /// </param>
+    /// <returns>
+    /// The translated markup and the code of the language it was translated
+    /// from.
+    /// </returns>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="markup"/> or <paramref name="targetLanguageCode"/>
+    /// is empty or consists only of white-space characters.
+    /// </exception>
+    /// <exception cref="ObjectDisposedException">
+    /// Thrown when the engine has been disposed.
+    /// </exception>
+    /// <exception cref="ProviderException">
+    /// Thrown when the request fails, when the endpoint reports a failure, or
+    /// when it answers with something this engine cannot read.
+    /// </exception>
+    public async Task<(string TranslatedMarkup, string SourceLanguageCode)> TranslateMarkupAsync(
+        string markup,
+        string targetLanguageCode,
+        string? sourceLanguageCode,
+        CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        ArgumentException.ThrowIfNullOrWhiteSpace(markup);
+        ArgumentException.ThrowIfNullOrWhiteSpace(targetLanguageCode);
+
+        string direction = sourceLanguageCode is null
+            ? targetLanguageCode
+            : $"{sourceLanguageCode}-{targetLanguageCode}";
+
+        YandexTranslationResponse? answer = await PostAsync(
+            $"{ApiUrl}/translate{Query(format: "html")}",
+            [new("text", markup), new("lang", direction)],
+            YandexTranslationJsonContext.Default.YandexTranslationResponse,
+            cancellationToken)
+            .ConfigureAwait(false);
+
+        if (answer is null)
+        {
+            throw new ProviderException(YandexProvider.Name, "Yandex returned an empty response.");
+        }
+
+        Ensure(answer.Code, answer.Message);
+
+        if (answer.Text is not [{ } translatedMarkup, ..])
+        {
+            throw new ProviderException(YandexProvider.Name, "Yandex returned no translation.");
+        }
+
+        return (translatedMarkup, ReadSourceLanguage(answer.Lang, sourceLanguageCode));
+    }
+
+    /// <summary>
     /// Detects the language the specified text is written in.
     /// </summary>
     /// <param name="text">
@@ -488,9 +555,9 @@ internal sealed class YandexEngine : ProviderEngine
         }
     }
 
-    private string Query()
+    private string Query(string format = "text")
     {
-        return $"?ucid={GetSession():N}&srv=android&format=text";
+        return $"?ucid={GetSession():N}&srv=android&format={format}";
     }
 
     private Guid GetSession()
