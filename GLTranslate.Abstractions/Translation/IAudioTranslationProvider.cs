@@ -10,10 +10,6 @@ namespace GLTranslate.Abstractions.Translation;
 /// The result carries what was heard and what it means in the target language,
 /// and, when the provider offers it, the translation spoken aloud.
 /// </remarks>
-public interface IAudioTranslationProvider : IProviderCapability<AudioTranslationRequest, AudioTranslationResult>
+public interface IAudioTranslationProvider : IProvider, IProviderCapability<AudioTranslationRequest, AudioTranslationResult>
 {
-    /// <summary>
-    /// Gets the name of the provider.
-    /// </summary>
-    string Name { get; }
 }

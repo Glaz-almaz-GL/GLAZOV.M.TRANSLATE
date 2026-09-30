@@ -16,10 +16,6 @@ namespace GLTranslate.Abstractions.TextToSpeech;
 /// single provider instance may be shared across concurrent operations.
 /// </para>
 /// </remarks>
-public interface ITextToSpeechProvider : IProviderCapability<TextToSpeechRequest, TextToSpeechResult>
+public interface ITextToSpeechProvider : IProvider, IProviderCapability<TextToSpeechRequest, TextToSpeechResult>
 {
-    /// <summary>
-    /// Gets the display name of the provider (for example <c>"Google"</c>).
-    /// </summary>
-    string Name { get; }
 }

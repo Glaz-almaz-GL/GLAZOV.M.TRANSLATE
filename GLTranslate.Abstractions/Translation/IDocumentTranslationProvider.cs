@@ -11,10 +11,6 @@ namespace GLTranslate.Abstractions.Translation;
 /// waits for the job to finish, so the returned task completes only with the
 /// translated document.
 /// </remarks>
-public interface IDocumentTranslationProvider : IProviderCapability<DocumentTranslationRequest, DocumentTranslationResult>
+public interface IDocumentTranslationProvider : IProvider, IProviderCapability<DocumentTranslationRequest, DocumentTranslationResult>
 {
-    /// <summary>
-    /// Gets the name of the provider.
-    /// </summary>
-    string Name { get; }
 }

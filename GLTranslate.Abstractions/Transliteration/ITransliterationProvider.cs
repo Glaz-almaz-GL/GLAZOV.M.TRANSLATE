@@ -16,10 +16,6 @@ namespace GLTranslate.Abstractions.Transliteration;
 /// single provider instance may be shared across concurrent operations.
 /// </para>
 /// </remarks>
-public interface ITransliterationProvider : IProviderCapability<TransliterationRequest, TransliterationResult>
+public interface ITransliterationProvider : IProvider, IProviderCapability<TransliterationRequest, TransliterationResult>
 {
-    /// <summary>
-    /// Gets the display name of the provider (for example <c>"Google"</c>).
-    /// </summary>
-    string Name { get; }
 }

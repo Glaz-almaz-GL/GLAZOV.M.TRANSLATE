@@ -10,10 +10,6 @@ namespace GLTranslate.Abstractions.Translation;
 /// The result keeps every line where it was found, so that a caller can draw
 /// the translation over the image it came from.
 /// </remarks>
-public interface IImageTranslationProvider : IProviderCapability<ImageTranslationRequest, ImageTranslationResult>
+public interface IImageTranslationProvider : IProvider, IProviderCapability<ImageTranslationRequest, ImageTranslationResult>
 {
-    /// <summary>
-    /// Gets the name of the provider.
-    /// </summary>
-    string Name { get; }
 }

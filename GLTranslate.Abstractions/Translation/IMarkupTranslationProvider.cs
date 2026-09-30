@@ -12,10 +12,6 @@ namespace GLTranslate.Abstractions.Translation;
 /// without being able to keep markup intact, and a caller that hands markup
 /// to a text translator gets its tags translated along with the words.
 /// </remarks>
-public interface IMarkupTranslationProvider : IProviderCapability<MarkupTranslationRequest, MarkupTranslationResult>
+public interface IMarkupTranslationProvider : IProvider, IProviderCapability<MarkupTranslationRequest, MarkupTranslationResult>
 {
-    /// <summary>
-    /// Gets the name of the provider.
-    /// </summary>
-    string Name { get; }
 }
