@@ -1,7 +1,7 @@
-using GLTranslate.Abstractions.Linguistics.Languages;
 using GLTranslate.Abstractions.Providers;
 using GLTranslate.Abstractions.Translation;
 using GLTranslate.Providers.Baidu.Internal;
+using GLTranslate.Providers.Common;
 
 namespace GLTranslate.Providers.Baidu;
 
@@ -22,12 +22,12 @@ namespace GLTranslate.Providers.Baidu;
 /// given is.
 /// </para>
 /// </remarks>
-public sealed class BaiduTranslationProvider : ITextTranslationProvider, IDisposable
+public sealed class BaiduTranslationProvider : TextTranslationProviderBase, IDisposable
 {
     private readonly BaiduEngine _engine;
 
     /// <inheritdoc/>
-    public string Name => BaiduProvider.Name;
+    public override string Name => BaiduProvider.Name;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BaiduTranslationProvider"/> class.
@@ -39,6 +39,7 @@ public sealed class BaiduTranslationProvider : ITextTranslationProvider, IDispos
     /// Thrown when <paramref name="credentials"/> is <see langword="null"/>.
     /// </exception>
     public BaiduTranslationProvider(BaiduCredentials credentials)
+        : base(BaiduLanguageCodeResolver.Instance)
     {
         _engine = new BaiduEngine(credentials);
     }
@@ -57,6 +58,7 @@ public sealed class BaiduTranslationProvider : ITextTranslationProvider, IDispos
     /// Thrown when an argument is <see langword="null"/>.
     /// </exception>
     public BaiduTranslationProvider(BaiduCredentials credentials, HttpClient httpClient)
+        : base(BaiduLanguageCodeResolver.Instance)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
 
@@ -64,38 +66,17 @@ public sealed class BaiduTranslationProvider : ITextTranslationProvider, IDispos
     }
 
     /// <inheritdoc/>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="request"/> is <see langword="null"/>.
-    /// </exception>
-    /// <exception cref="ProviderException">
-    /// Thrown when a language of the request is unknown to GLTranslate, when
-    /// Baidu refuses the request, or when the answer cannot be read.
-    /// </exception>
-    public async Task<TextTranslationResult> ExecuteAsync(
-        TextTranslationRequest request,
-        CancellationToken cancellationToken = default)
+    protected override async Task<ProviderTranslation> TranslateAsync(
+        string text,
+        string? sourceLanguageCode,
+        string targetLanguageCode,
+        CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
-        string targetCode = BaiduLanguageCodeResolver.ToBaiduCode(request.TargetLanguageId);
-
-        string? sourceCode = request.SourceLanguageId is null
-            ? null
-            : BaiduLanguageCodeResolver.ToBaiduCode(request.SourceLanguageId);
-
-        (string translation, string resolvedSourceCode) = await _engine
-            .TranslateAsync(request.Text.Value, sourceCode, targetCode, cancellationToken)
+        (string translation, string detectedSourceCode) = await _engine
+            .TranslateAsync(text, sourceLanguageCode, targetLanguageCode, cancellationToken)
             .ConfigureAwait(false);
 
-        LanguageId resolvedSourceLanguageId = request.SourceLanguageId
-            ?? BaiduLanguageCodeResolver.FromBaiduCode(resolvedSourceCode);
-
-        return new TextTranslationResult(
-            request.Id,
-            new ProviderText(translation),
-            resolvedSourceLanguageId,
-            request.TargetLanguageId,
-            wasSourceLanguageDetected: request.SourceLanguageId is null);
+        return new ProviderTranslation(translation, detectedSourceCode);
     }
 
     /// <inheritdoc/>

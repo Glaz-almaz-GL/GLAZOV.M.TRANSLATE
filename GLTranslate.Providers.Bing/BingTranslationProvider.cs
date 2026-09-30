@@ -1,7 +1,6 @@
-using GLTranslate.Abstractions.Linguistics.Languages;
-using GLTranslate.Abstractions.Providers;
 using GLTranslate.Abstractions.Translation;
 using GLTranslate.Providers.Bing.Internal;
+using GLTranslate.Providers.Common;
 
 namespace GLTranslate.Providers.Bing;
 
@@ -18,17 +17,18 @@ namespace GLTranslate.Providers.Bing;
 /// given is.
 /// </para>
 /// </remarks>
-public sealed class BingTranslationProvider : ITextTranslationProvider, IDisposable
+public sealed class BingTranslationProvider : TextTranslationProviderBase, IDisposable
 {
     private readonly BingEngine _engine;
 
     /// <inheritdoc/>
-    public string Name => BingProvider.Name;
+    public override string Name => BingProvider.Name;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BingTranslationProvider"/> class.
     /// </summary>
     public BingTranslationProvider()
+        : base(BingLanguageCodeResolver.Instance)
     {
         _engine = new BingEngine();
     }
@@ -44,6 +44,7 @@ public sealed class BingTranslationProvider : ITextTranslationProvider, IDisposa
     /// Thrown when <paramref name="httpClient"/> is <see langword="null"/>.
     /// </exception>
     public BingTranslationProvider(HttpClient httpClient)
+        : base(BingLanguageCodeResolver.Instance)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
 
@@ -51,39 +52,17 @@ public sealed class BingTranslationProvider : ITextTranslationProvider, IDisposa
     }
 
     /// <inheritdoc/>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="request"/> is <see langword="null"/>.
-    /// </exception>
-    /// <exception cref="ProviderException">
-    /// Thrown when a language of the request is unknown to GLTranslate, when
-    /// Bing refuses the request, or when the endpoint answers with something
-    /// the provider cannot read.
-    /// </exception>
-    public async Task<TextTranslationResult> ExecuteAsync(
-        TextTranslationRequest request,
-        CancellationToken cancellationToken = default)
+    protected override async Task<ProviderTranslation> TranslateAsync(
+        string text,
+        string? sourceLanguageCode,
+        string targetLanguageCode,
+        CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
-        string targetCode = BingLanguageCodeResolver.ToBingCode(request.TargetLanguageId);
-
-        string? sourceCode = request.SourceLanguageId is null
-            ? null
-            : BingLanguageCodeResolver.ToBingCode(request.SourceLanguageId);
-
         BingAnswer answer = await _engine
-            .TranslateAsync(request.Text.Value, targetCode, sourceCode, cancellationToken)
+            .TranslateAsync(text, targetLanguageCode, sourceLanguageCode, cancellationToken)
             .ConfigureAwait(false);
 
-        LanguageId resolvedSourceLanguageId = request.SourceLanguageId
-            ?? BingLanguageCodeResolver.FromBingCode(answer.SourceLanguageCode);
-
-        return new TextTranslationResult(
-            request.Id,
-            new ProviderText(answer.TranslatedText),
-            resolvedSourceLanguageId,
-            request.TargetLanguageId,
-            wasSourceLanguageDetected: request.SourceLanguageId is null);
+        return new ProviderTranslation(answer.TranslatedText, answer.SourceLanguageCode);
     }
 
     /// <inheritdoc/>

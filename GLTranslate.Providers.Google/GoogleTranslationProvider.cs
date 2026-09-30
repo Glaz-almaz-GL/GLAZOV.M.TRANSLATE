@@ -1,7 +1,6 @@
-using GLTranslate.Abstractions.Linguistics.Languages;
-using GLTranslate.Abstractions.Providers;
 using GLTranslate.Abstractions.Translation;
 using GLTranslate.Providers.Google.Internal;
+using GLTranslate.Providers.Common;
 
 namespace GLTranslate.Providers.Google;
 
@@ -21,17 +20,18 @@ namespace GLTranslate.Providers.Google;
 /// supplied <see cref="HttpClient"/> is not mutated after construction.
 /// </para>
 /// </remarks>
-public sealed class GoogleTranslationProvider : ITextTranslationProvider, IDisposable
+public sealed class GoogleTranslationProvider : TextTranslationProviderBase, IDisposable
 {
     private readonly GoogleTranslationEngine _engine;
 
     /// <inheritdoc/>
-    public string Name => GoogleProvider.Name;
+    public override string Name => GoogleProvider.Name;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GoogleTranslationProvider"/> class.
     /// </summary>
     public GoogleTranslationProvider()
+        : base(GoogleLanguageCodeResolver.Instance)
     {
         _engine = new GoogleTranslationEngine();
     }
@@ -48,6 +48,7 @@ public sealed class GoogleTranslationProvider : ITextTranslationProvider, IDispo
     /// Thrown when <paramref name="httpClient"/> is <see langword="null"/>.
     /// </exception>
     public GoogleTranslationProvider(HttpClient httpClient)
+        : base(GoogleLanguageCodeResolver.Instance)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
 
@@ -55,31 +56,18 @@ public sealed class GoogleTranslationProvider : ITextTranslationProvider, IDispo
     }
 
     /// <inheritdoc/>
-    /// <exception cref="ProviderException">
-    /// Thrown when <paramref name="request"/> specifies a language unknown
-    /// to GLTranslate, or when the underlying request to Google Translate
-    /// fails or returns an unexpected response.
-    /// </exception>
-    public async Task<TextTranslationResult> ExecuteAsync(TextTranslationRequest request, CancellationToken cancellationToken = default)
+    protected override async Task<ProviderTranslation> TranslateAsync(
+        string text,
+        string? sourceLanguageCode,
+        string targetLanguageCode,
+        CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
-        string sourceCode = GoogleLanguageCodeResolver.ToGoogleCode(request.SourceLanguageId);
-        string targetCode = GoogleLanguageCodeResolver.ToGoogleCode(request.TargetLanguageId);
-
+        // Google is asked to detect the language by naming "auto".
         (string translatedText, string detectedSourceCode) = await _engine
-            .TranslateAsync(request.Text.Value, sourceCode, targetCode, cancellationToken)
+            .TranslateAsync(text, sourceLanguageCode ?? GoogleLanguageCodeResolver.AutoDetectCode, targetLanguageCode, cancellationToken)
             .ConfigureAwait(false);
 
-        LanguageId resolvedSourceLanguageId = request.SourceLanguageId
-            ?? GoogleLanguageCodeResolver.FromGoogleCode(detectedSourceCode);
-
-        return new TextTranslationResult(
-            request.Id,
-            new ProviderText(translatedText),
-            resolvedSourceLanguageId,
-            request.TargetLanguageId,
-            wasSourceLanguageDetected: request.SourceLanguageId is null);
+        return new ProviderTranslation(translatedText, detectedSourceCode);
     }
 
     /// <inheritdoc/>

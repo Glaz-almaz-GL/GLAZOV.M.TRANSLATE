@@ -1,7 +1,6 @@
-using GLTranslate.Abstractions.Linguistics.Languages;
-using GLTranslate.Abstractions.Providers;
 using GLTranslate.Abstractions.Translation;
 using GLTranslate.Providers.Google.Internal;
+using GLTranslate.Providers.Common;
 
 namespace GLTranslate.Providers.Google;
 
@@ -20,17 +19,18 @@ namespace GLTranslate.Providers.Google;
 /// given is.
 /// </para>
 /// </remarks>
-public sealed class GoogleMarkupTranslationProvider : IMarkupTranslationProvider, IDisposable
+public sealed class GoogleMarkupTranslationProvider : MarkupTranslationProviderBase, IDisposable
 {
     private readonly GoogleMarkupTranslationEngine _engine;
 
     /// <inheritdoc/>
-    public string Name => GoogleProvider.Name;
+    public override string Name => GoogleProvider.Name;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GoogleMarkupTranslationProvider"/> class.
     /// </summary>
     public GoogleMarkupTranslationProvider()
+        : base(GoogleLanguageCodeResolver.Instance)
     {
         _engine = new GoogleMarkupTranslationEngine();
     }
@@ -46,6 +46,7 @@ public sealed class GoogleMarkupTranslationProvider : IMarkupTranslationProvider
     /// Thrown when <paramref name="httpClient"/> is <see langword="null"/>.
     /// </exception>
     public GoogleMarkupTranslationProvider(HttpClient httpClient)
+        : base(GoogleLanguageCodeResolver.Instance)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
 
@@ -53,40 +54,18 @@ public sealed class GoogleMarkupTranslationProvider : IMarkupTranslationProvider
     }
 
     /// <inheritdoc/>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="request"/> is <see langword="null"/>.
-    /// </exception>
-    /// <exception cref="ProviderException">
-    /// Thrown when a language of the request is unknown to GLTranslate or one
-    /// Google Translate cannot translate, when the request fails, or when the
-    /// endpoint answers with something the provider cannot read.
-    /// </exception>
-    public async Task<MarkupTranslationResult> ExecuteAsync(
-        MarkupTranslationRequest request,
-        CancellationToken cancellationToken = default)
+    protected override async Task<ProviderTranslation> TranslateAsync(
+        string markup,
+        string? sourceLanguageCode,
+        string targetLanguageCode,
+        CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
-        string sourceCode = GoogleLanguageCodeResolver.ToGoogleCode(request.SourceLanguageId);
-        string targetCode = GoogleLanguageCodeResolver.ToGoogleCode(request.TargetLanguageId);
-
+        // Google is asked to detect the language by naming "auto".
         (string translatedMarkup, string? detectedSourceCode) = await _engine
-            .TranslateAsync(request.Markup.Value, sourceCode, targetCode, cancellationToken)
+            .TranslateAsync(markup, sourceLanguageCode ?? GoogleLanguageCodeResolver.AutoDetectCode, targetLanguageCode, cancellationToken)
             .ConfigureAwait(false);
 
-        LanguageId resolvedSourceLanguageId = request.SourceLanguageId
-            ?? (detectedSourceCode is null
-                ? throw new ProviderException(
-                    GoogleProvider.Name,
-                    "Google Translate detected no source language, although none was given.")
-                : GoogleLanguageCodeResolver.FromGoogleCode(detectedSourceCode));
-
-        return new MarkupTranslationResult(
-            request.Id,
-            new ProviderMarkup(translatedMarkup),
-            resolvedSourceLanguageId,
-            request.TargetLanguageId,
-            wasSourceLanguageDetected: request.SourceLanguageId is null);
+        return new ProviderTranslation(translatedMarkup, detectedSourceCode);
     }
 
     /// <inheritdoc/>

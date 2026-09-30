@@ -16,9 +16,12 @@ namespace GLTranslate.Providers.Google.Internal;
 /// </remarks>
 internal static class GoogleLanguageCodeResolver
 {
-    private const string AutoDetectCode = "auto";
+    internal const string AutoDetectCode = "auto";
 
-    private static readonly LanguageCodeResolver Resolver = new(
+    /// <summary>
+    /// Gets how the languages of GLTranslate are written in the provider's terms.
+    /// </summary>
+    internal static LanguageCodeResolver Instance { get; } = new(
         GoogleProvider.Name,
         [
             // Google has no plain "zh": it asks which Chinese. The domain model
@@ -59,7 +62,7 @@ internal static class GoogleLanguageCodeResolver
     /// </exception>
     public static string ToGoogleCode(LanguageId? languageId)
     {
-        return languageId is null ? AutoDetectCode : Resolver.ToProviderCode(languageId);
+        return languageId is null ? AutoDetectCode : Instance.ToProviderCode(languageId);
     }
 
     /// <summary>
@@ -82,6 +85,6 @@ internal static class GoogleLanguageCodeResolver
     /// </exception>
     public static LanguageId FromGoogleCode(string googleLanguageCode)
     {
-        return Resolver.FromProviderCode(googleLanguageCode);
+        return Instance.FromProviderCode(googleLanguageCode);
     }
 }

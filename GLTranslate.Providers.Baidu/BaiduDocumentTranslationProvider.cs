@@ -116,12 +116,8 @@ public sealed class BaiduDocumentTranslationProvider : IDocumentTranslationProvi
                 cancellationToken)
             .ConfigureAwait(false);
 
-        LanguageId resolvedSourceLanguageId = request.SourceLanguageId
-            ?? (string.IsNullOrWhiteSpace(detectedSourceCode)
-                ? throw new ProviderException(
-                    BaiduProvider.Name,
-                    "Baidu named no source language, although none was given.")
-                : BaiduLanguageCodeResolver.FromBaiduCode(detectedSourceCode));
+        LanguageId resolvedSourceLanguageId = BaiduLanguageCodeResolver.Instance
+            .ResolveSource(request.SourceLanguageId, detectedSourceCode);
 
         return new DocumentTranslationResult(
             request.Id,

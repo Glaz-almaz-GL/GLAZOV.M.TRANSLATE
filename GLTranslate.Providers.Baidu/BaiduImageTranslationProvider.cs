@@ -1,7 +1,7 @@
-using GLTranslate.Abstractions.Linguistics.Languages;
 using GLTranslate.Abstractions.Providers;
 using GLTranslate.Abstractions.Translation;
 using GLTranslate.Providers.Baidu.Internal;
+using GLTranslate.Providers.Common;
 using System.Collections.Immutable;
 using System.Globalization;
 
@@ -29,12 +29,12 @@ namespace GLTranslate.Providers.Baidu;
 /// given is.
 /// </para>
 /// </remarks>
-public sealed class BaiduImageTranslationProvider : IImageTranslationProvider, IDisposable
+public sealed class BaiduImageTranslationProvider : ImageTranslationProviderBase, IDisposable
 {
     private readonly BaiduEngine _engine;
 
     /// <inheritdoc/>
-    public string Name => BaiduProvider.Name;
+    public override string Name => BaiduProvider.Name;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BaiduImageTranslationProvider"/> class.
@@ -46,6 +46,7 @@ public sealed class BaiduImageTranslationProvider : IImageTranslationProvider, I
     /// Thrown when <paramref name="credentials"/> is <see langword="null"/>.
     /// </exception>
     public BaiduImageTranslationProvider(BaiduCredentials credentials)
+        : base(BaiduLanguageCodeResolver.Instance)
     {
         _engine = new BaiduEngine(credentials);
     }
@@ -64,6 +65,7 @@ public sealed class BaiduImageTranslationProvider : IImageTranslationProvider, I
     /// Thrown when an argument is <see langword="null"/>.
     /// </exception>
     public BaiduImageTranslationProvider(BaiduCredentials credentials, HttpClient httpClient)
+        : base(BaiduLanguageCodeResolver.Instance)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
 
@@ -71,44 +73,22 @@ public sealed class BaiduImageTranslationProvider : IImageTranslationProvider, I
     }
 
     /// <inheritdoc/>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="request"/> is <see langword="null"/>.
-    /// </exception>
-    /// <exception cref="ProviderException">
-    /// Thrown when a language of the request is unknown to GLTranslate, when
-    /// the image is of a type Baidu does not read, when Baidu refuses the
-    /// request or reads nothing on the image, or when the answer cannot be
-    /// read.
-    /// </exception>
-    public async Task<ImageTranslationResult> ExecuteAsync(
-        ImageTranslationRequest request,
-        CancellationToken cancellationToken = default)
+    protected override async Task<ImageTranslation> TranslateAsync(
+        ProviderImage image,
+        string? sourceLanguageCode,
+        string targetLanguageCode,
+        CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
-        string targetCode = BaiduLanguageCodeResolver.ToBaiduCode(request.TargetLanguageId);
-
-        string? sourceCode = request.SourceLanguageId is null
-            ? null
-            : BaiduLanguageCodeResolver.ToBaiduCode(request.SourceLanguageId);
-
         BaiduPictureData data = await _engine
             .TranslatePictureAsync(
-                request.Image.Content.AsMemory(),
-                request.Image.MediaType,
-                sourceCode,
-                targetCode,
+                image.Content.AsMemory(),
+                image.MediaType,
+                sourceLanguageCode,
+                targetLanguageCode,
                 cancellationToken)
             .ConfigureAwait(false);
 
-        ImmutableArray<TranslatedLine> lines = ReadLines(data);
-
-        return new ImageTranslationResult(
-            request.Id,
-            lines,
-            request.SourceLanguageId ?? ResolveDetected(data.From, request.TargetLanguageId),
-            request.TargetLanguageId,
-            wasSourceLanguageDetected: request.SourceLanguageId is null);
+        return new ImageTranslation(ReadLines(data), data.From);
     }
 
     private static ImmutableArray<TranslatedLine> ReadLines(BaiduPictureData data)
@@ -130,16 +110,6 @@ public sealed class BaiduImageTranslationProvider : IImageTranslationProvider, I
         }
 
         return lines.ToImmutable();
-    }
-
-    private static LanguageId ResolveDetected(string? detectedLanguageCode, LanguageId fallback)
-    {
-        // Baidu names the language it read even when the image held nothing to
-        // translate; when it names none, there is nothing better to report than
-        // the language that was asked for.
-        return string.IsNullOrWhiteSpace(detectedLanguageCode)
-            ? fallback
-            : BaiduLanguageCodeResolver.FromBaiduCode(detectedLanguageCode);
     }
 
     private static TextBounds ToBounds(string? rectangle)

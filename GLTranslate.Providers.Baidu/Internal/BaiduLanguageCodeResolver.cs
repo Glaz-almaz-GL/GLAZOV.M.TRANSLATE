@@ -38,7 +38,10 @@ internal static class BaiduLanguageCodeResolver
         new("yi", "yid"), new("yo", "yor"), new("zu", "zul"),
     ];
 
-    private static readonly LanguageCodeResolver Resolver = new(
+    /// <summary>
+    /// Gets how the languages of GLTranslate are written in the provider's terms.
+    /// </summary>
+    internal static LanguageCodeResolver Instance { get; } = new(
         BaiduProvider.Name,
         Differing,
         [.. Differing.Select(pair => new KeyValuePair<string, string>(pair.Value, pair.Key))]);
@@ -61,7 +64,7 @@ internal static class BaiduLanguageCodeResolver
     /// </exception>
     public static string ToBaiduCode(LanguageId languageId)
     {
-        return Resolver.ToProviderCode(languageId);
+        return Instance.ToProviderCode(languageId);
     }
 
     /// <summary>
@@ -82,6 +85,6 @@ internal static class BaiduLanguageCodeResolver
     /// </exception>
     public static LanguageId FromBaiduCode(string baiduLanguageCode)
     {
-        return Resolver.FromProviderCode(baiduLanguageCode);
+        return Instance.FromProviderCode(baiduLanguageCode);
     }
 }

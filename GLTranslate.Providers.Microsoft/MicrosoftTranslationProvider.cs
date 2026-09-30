@@ -1,7 +1,6 @@
-using GLTranslate.Abstractions.Linguistics.Languages;
-using GLTranslate.Abstractions.Providers;
 using GLTranslate.Abstractions.Translation;
 using GLTranslate.Providers.Microsoft.Internal;
+using GLTranslate.Providers.Common;
 
 namespace GLTranslate.Providers.Microsoft;
 
@@ -18,17 +17,18 @@ namespace GLTranslate.Providers.Microsoft;
 /// given is.
 /// </para>
 /// </remarks>
-public sealed class MicrosoftTranslationProvider : ITextTranslationProvider, IDisposable
+public sealed class MicrosoftTranslationProvider : TextTranslationProviderBase, IDisposable
 {
     private readonly MicrosoftTranslationEngine _engine;
 
     /// <inheritdoc/>
-    public string Name => MicrosoftProvider.Name;
+    public override string Name => MicrosoftProvider.Name;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MicrosoftTranslationProvider"/> class.
     /// </summary>
     public MicrosoftTranslationProvider()
+        : base(MicrosoftLanguageCodeResolver.Instance)
     {
         _engine = new MicrosoftTranslationEngine();
     }
@@ -44,6 +44,7 @@ public sealed class MicrosoftTranslationProvider : ITextTranslationProvider, IDi
     /// Thrown when <paramref name="httpClient"/> is <see langword="null"/>.
     /// </exception>
     public MicrosoftTranslationProvider(HttpClient httpClient)
+        : base(MicrosoftLanguageCodeResolver.Instance)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
 
@@ -51,39 +52,17 @@ public sealed class MicrosoftTranslationProvider : ITextTranslationProvider, IDi
     }
 
     /// <inheritdoc/>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="request"/> is <see langword="null"/>.
-    /// </exception>
-    /// <exception cref="ProviderException">
-    /// Thrown when a language of the request is unknown to Microsoft
-    /// Translator, when the request fails, or when the endpoint answers with
-    /// something the provider cannot read.
-    /// </exception>
-    public async Task<TextTranslationResult> ExecuteAsync(
-        TextTranslationRequest request,
-        CancellationToken cancellationToken = default)
+    protected override async Task<ProviderTranslation> TranslateAsync(
+        string text,
+        string? sourceLanguageCode,
+        string targetLanguageCode,
+        CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
-        string targetCode = MicrosoftLanguageCodeResolver.ToMicrosoftCode(request.TargetLanguageId);
-
-        string? sourceCode = request.SourceLanguageId is null
-            ? null
-            : MicrosoftLanguageCodeResolver.ToMicrosoftCode(request.SourceLanguageId);
-
         (string translatedText, string detectedSourceCode) = await _engine
-            .TranslateAsync(request.Text.Value, targetCode, sourceCode, cancellationToken)
+            .TranslateAsync(text, targetLanguageCode, sourceLanguageCode, cancellationToken)
             .ConfigureAwait(false);
 
-        LanguageId resolvedSourceLanguageId = request.SourceLanguageId
-            ?? MicrosoftLanguageCodeResolver.FromMicrosoftCode(detectedSourceCode);
-
-        return new TextTranslationResult(
-            request.Id,
-            new ProviderText(translatedText),
-            resolvedSourceLanguageId,
-            request.TargetLanguageId,
-            wasSourceLanguageDetected: request.SourceLanguageId is null);
+        return new ProviderTranslation(translatedText, detectedSourceCode);
     }
 
     /// <inheritdoc/>

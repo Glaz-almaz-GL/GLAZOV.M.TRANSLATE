@@ -1,7 +1,6 @@
-using GLTranslate.Abstractions.Linguistics.Languages;
-using GLTranslate.Abstractions.Providers;
 using GLTranslate.Abstractions.Translation;
 using GLTranslate.Providers.YandexCloud.Internal;
+using GLTranslate.Providers.Common;
 
 namespace GLTranslate.Providers.YandexCloud;
 
@@ -20,12 +19,12 @@ namespace GLTranslate.Providers.YandexCloud;
 /// long as the <see cref="HttpClient"/> it was given is.
 /// </para>
 /// </remarks>
-public sealed class YandexCloudTranslationProvider : ITextTranslationProvider, IDisposable
+public sealed class YandexCloudTranslationProvider : TextTranslationProviderBase, IDisposable
 {
     private readonly YandexCloudEngine _engine;
 
     /// <inheritdoc/>
-    public string Name => YandexCloudProvider.Name;
+    public override string Name => YandexCloudProvider.Name;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="YandexCloudTranslationProvider"/> class.
@@ -37,6 +36,7 @@ public sealed class YandexCloudTranslationProvider : ITextTranslationProvider, I
     /// Thrown when <paramref name="credentials"/> is <see langword="null"/>.
     /// </exception>
     public YandexCloudTranslationProvider(YandexCloudCredentials credentials)
+        : base(YandexCloudLanguageCodeResolver.Instance)
     {
         _engine = new YandexCloudEngine(credentials);
     }
@@ -55,6 +55,7 @@ public sealed class YandexCloudTranslationProvider : ITextTranslationProvider, I
     /// Thrown when an argument is <see langword="null"/>.
     /// </exception>
     public YandexCloudTranslationProvider(YandexCloudCredentials credentials, HttpClient httpClient)
+        : base(YandexCloudLanguageCodeResolver.Instance)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
 
@@ -62,43 +63,17 @@ public sealed class YandexCloudTranslationProvider : ITextTranslationProvider, I
     }
 
     /// <inheritdoc/>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="request"/> is <see langword="null"/>.
-    /// </exception>
-    /// <exception cref="ProviderException">
-    /// Thrown when a language of the request is unknown to GLTranslate, when
-    /// the text is too long, when Yandex refuses the request, or when the
-    /// answer cannot be read.
-    /// </exception>
-    public async Task<TextTranslationResult> ExecuteAsync(
-        TextTranslationRequest request,
-        CancellationToken cancellationToken = default)
+    protected override async Task<ProviderTranslation> TranslateAsync(
+        string text,
+        string? sourceLanguageCode,
+        string targetLanguageCode,
+        CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
-        string targetCode = YandexCloudLanguageCodeResolver.ToYandexCloudCode(request.TargetLanguageId);
-
-        string? sourceCode = request.SourceLanguageId is null
-            ? null
-            : YandexCloudLanguageCodeResolver.ToYandexCloudCode(request.SourceLanguageId);
-
         (IReadOnlyList<string> translations, string? detectedSourceCode) = await _engine
-            .TranslateAsync([request.Text.Value], isMarkup: false, sourceCode, targetCode, cancellationToken)
+            .TranslateAsync([text], isMarkup: false, sourceLanguageCode, targetLanguageCode, cancellationToken)
             .ConfigureAwait(false);
 
-        LanguageId resolvedSourceLanguageId = request.SourceLanguageId
-            ?? (string.IsNullOrWhiteSpace(detectedSourceCode)
-                ? throw new ProviderException(
-                    YandexCloudProvider.Name,
-                    "Yandex Cloud named no source language, although none was given.")
-                : YandexCloudLanguageCodeResolver.FromYandexCloudCode(detectedSourceCode));
-
-        return new TextTranslationResult(
-            request.Id,
-            new ProviderText(translations[0]),
-            resolvedSourceLanguageId,
-            request.TargetLanguageId,
-            wasSourceLanguageDetected: request.SourceLanguageId is null);
+        return new ProviderTranslation(translations[0], detectedSourceCode);
     }
 
     /// <inheritdoc/>

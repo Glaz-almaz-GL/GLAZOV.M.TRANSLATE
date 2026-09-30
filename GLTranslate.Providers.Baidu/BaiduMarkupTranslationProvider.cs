@@ -1,7 +1,6 @@
-using GLTranslate.Abstractions.Linguistics.Languages;
-using GLTranslate.Abstractions.Providers;
 using GLTranslate.Abstractions.Translation;
 using GLTranslate.Providers.Baidu.Internal;
+using GLTranslate.Providers.Common;
 
 namespace GLTranslate.Providers.Baidu;
 
@@ -20,12 +19,12 @@ namespace GLTranslate.Providers.Baidu;
 /// given is.
 /// </para>
 /// </remarks>
-public sealed class BaiduMarkupTranslationProvider : IMarkupTranslationProvider, IDisposable
+public sealed class BaiduMarkupTranslationProvider : MarkupTranslationProviderBase, IDisposable
 {
     private readonly BaiduEngine _engine;
 
     /// <inheritdoc/>
-    public string Name => BaiduProvider.Name;
+    public override string Name => BaiduProvider.Name;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BaiduMarkupTranslationProvider"/> class.
@@ -37,6 +36,7 @@ public sealed class BaiduMarkupTranslationProvider : IMarkupTranslationProvider,
     /// Thrown when <paramref name="credentials"/> is <see langword="null"/>.
     /// </exception>
     public BaiduMarkupTranslationProvider(BaiduCredentials credentials)
+        : base(BaiduLanguageCodeResolver.Instance)
     {
         _engine = new BaiduEngine(credentials);
     }
@@ -55,6 +55,7 @@ public sealed class BaiduMarkupTranslationProvider : IMarkupTranslationProvider,
     /// Thrown when an argument is <see langword="null"/>.
     /// </exception>
     public BaiduMarkupTranslationProvider(BaiduCredentials credentials, HttpClient httpClient)
+        : base(BaiduLanguageCodeResolver.Instance)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
 
@@ -62,38 +63,17 @@ public sealed class BaiduMarkupTranslationProvider : IMarkupTranslationProvider,
     }
 
     /// <inheritdoc/>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="request"/> is <see langword="null"/>.
-    /// </exception>
-    /// <exception cref="ProviderException">
-    /// Thrown when a language of the request is unknown to GLTranslate, when
-    /// Baidu refuses the request, or when the answer cannot be read.
-    /// </exception>
-    public async Task<MarkupTranslationResult> ExecuteAsync(
-        MarkupTranslationRequest request,
-        CancellationToken cancellationToken = default)
+    protected override async Task<ProviderTranslation> TranslateAsync(
+        string markup,
+        string? sourceLanguageCode,
+        string targetLanguageCode,
+        CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
-        string targetCode = BaiduLanguageCodeResolver.ToBaiduCode(request.TargetLanguageId);
-
-        string? sourceCode = request.SourceLanguageId is null
-            ? null
-            : BaiduLanguageCodeResolver.ToBaiduCode(request.SourceLanguageId);
-
-        (string translation, string resolvedSourceCode) = await _engine
-            .TranslateMarkupAsync(request.Markup.Value, sourceCode, targetCode, cancellationToken)
+        (string translation, string detectedSourceCode) = await _engine
+            .TranslateMarkupAsync(markup, sourceLanguageCode, targetLanguageCode, cancellationToken)
             .ConfigureAwait(false);
 
-        LanguageId resolvedSourceLanguageId = request.SourceLanguageId
-            ?? BaiduLanguageCodeResolver.FromBaiduCode(resolvedSourceCode);
-
-        return new MarkupTranslationResult(
-            request.Id,
-            new ProviderMarkup(translation),
-            resolvedSourceLanguageId,
-            request.TargetLanguageId,
-            wasSourceLanguageDetected: request.SourceLanguageId is null);
+        return new ProviderTranslation(translation, detectedSourceCode);
     }
 
     /// <inheritdoc/>

@@ -1,7 +1,7 @@
-using GLTranslate.Abstractions.Linguistics.Languages;
 using GLTranslate.Abstractions.Providers;
 using GLTranslate.Abstractions.Translation;
 using GLTranslate.Providers.GoogleCloud.Internal;
+using GLTranslate.Providers.Common;
 using System.Collections.Immutable;
 
 namespace GLTranslate.Providers.GoogleCloud;
@@ -29,12 +29,12 @@ namespace GLTranslate.Providers.GoogleCloud;
 /// given is.
 /// </para>
 /// </remarks>
-public sealed class GoogleCloudImageTranslationProvider : IImageTranslationProvider, IDisposable
+public sealed class GoogleCloudImageTranslationProvider : ImageTranslationProviderBase, IDisposable
 {
     private readonly GoogleCloudEngine _engine;
 
     /// <inheritdoc/>
-    public string Name => GoogleCloudProvider.Name;
+    public override string Name => GoogleCloudProvider.Name;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GoogleCloudImageTranslationProvider"/> class.
@@ -46,6 +46,7 @@ public sealed class GoogleCloudImageTranslationProvider : IImageTranslationProvi
     /// Thrown when <paramref name="credentials"/> is <see langword="null"/>.
     /// </exception>
     public GoogleCloudImageTranslationProvider(GoogleCloudCredentials credentials)
+        : base(GoogleCloudLanguageCodeResolver.Instance)
     {
         _engine = new GoogleCloudEngine(credentials);
     }
@@ -64,6 +65,7 @@ public sealed class GoogleCloudImageTranslationProvider : IImageTranslationProvi
     /// Thrown when an argument is <see langword="null"/>.
     /// </exception>
     public GoogleCloudImageTranslationProvider(GoogleCloudCredentials credentials, HttpClient httpClient)
+        : base(GoogleCloudLanguageCodeResolver.Instance)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
 
@@ -71,48 +73,29 @@ public sealed class GoogleCloudImageTranslationProvider : IImageTranslationProvi
     }
 
     /// <inheritdoc/>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="request"/> is <see langword="null"/>.
-    /// </exception>
-    /// <exception cref="ProviderException">
-    /// Thrown when a language of the request is unknown to GLTranslate, when
-    /// Google refuses a request, or when an answer cannot be read.
-    /// </exception>
-    public async Task<ImageTranslationResult> ExecuteAsync(
-        ImageTranslationRequest request,
-        CancellationToken cancellationToken = default)
+    protected override async Task<ImageTranslation> TranslateAsync(
+        ProviderImage image,
+        string? sourceLanguageCode,
+        string targetLanguageCode,
+        CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
-        string targetCode = GoogleCloudLanguageCodeResolver.ToGoogleCloudCode(request.TargetLanguageId);
-
-        string? sourceCode = request.SourceLanguageId is null
-            ? null
-            : GoogleCloudLanguageCodeResolver.ToGoogleCloudCode(request.SourceLanguageId);
-
         GoogleCloudTextAnnotation? text = await _engine
-            .RecognizeAsync(request.Image.Content.AsMemory(), sourceCode, cancellationToken)
+            .RecognizeAsync(image.Content.AsMemory(), sourceLanguageCode, cancellationToken)
             .ConfigureAwait(false);
 
         GoogleCloudPage? page = text?.Pages?.FirstOrDefault();
 
         ImmutableArray<RecognizedLine> recognized = page is null ? [] : GoogleCloudTextLines.Read(page);
 
+        string? suspected = page?.Property?.DetectedLanguages?.FirstOrDefault()?.LanguageCode;
+
         if (recognized.IsEmpty)
         {
-            // An image with no text on it is not a failure: there is simply
-            // nothing to translate, and no language to report but the one asked
-            // for, or the one Vision suspects, or the target when it suspects none.
-            return new ImageTranslationResult(
-                request.Id,
-                [],
-                request.SourceLanguageId ?? ResolveDetected(page, request.TargetLanguageId),
-                request.TargetLanguageId,
-                wasSourceLanguageDetected: request.SourceLanguageId is null);
+            return new ImageTranslation([], suspected);
         }
 
         (IReadOnlyList<string> translations, string? detectedSourceCode) = await _engine
-            .TranslateAsync([.. recognized.Select(line => line.Text)], isMarkup: false, sourceCode, targetCode, cancellationToken)
+            .TranslateAsync([.. recognized.Select(line => line.Text)], isMarkup: false, sourceLanguageCode, targetLanguageCode, cancellationToken)
             .ConfigureAwait(false);
 
         ImmutableArray<TranslatedLine>.Builder lines = ImmutableArray.CreateBuilder<TranslatedLine>(recognized.Length);
@@ -124,26 +107,9 @@ public sealed class GoogleCloudImageTranslationProvider : IImageTranslationProvi
             lines.Add(new TranslatedLine(line.Text, translations[index], line.Bounds, line.Words));
         }
 
-        LanguageId sourceLanguageId = request.SourceLanguageId
-            ?? (string.IsNullOrWhiteSpace(detectedSourceCode)
-                ? ResolveDetected(page, request.TargetLanguageId)
-                : GoogleCloudLanguageCodeResolver.FromGoogleCloudCode(detectedSourceCode));
-
-        return new ImageTranslationResult(
-            request.Id,
-            lines.MoveToImmutable(),
-            sourceLanguageId,
-            request.TargetLanguageId,
-            wasSourceLanguageDetected: request.SourceLanguageId is null);
-    }
-
-    private static LanguageId ResolveDetected(GoogleCloudPage? page, LanguageId fallback)
-    {
-        string? code = page?.Property?.DetectedLanguages?.FirstOrDefault()?.LanguageCode;
-
-        return string.IsNullOrWhiteSpace(code)
-            ? fallback
-            : GoogleCloudLanguageCodeResolver.FromGoogleCloudCode(code);
+        // What Translation detected is the better witness of the language, since
+        // it has read the lines; Vision's suspicion is the fallback.
+        return new ImageTranslation(lines.MoveToImmutable(), detectedSourceCode ?? suspected);
     }
 
     /// <inheritdoc/>

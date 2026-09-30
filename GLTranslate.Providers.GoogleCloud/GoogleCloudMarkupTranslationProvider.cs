@@ -1,7 +1,6 @@
-using GLTranslate.Abstractions.Linguistics.Languages;
-using GLTranslate.Abstractions.Providers;
 using GLTranslate.Abstractions.Translation;
 using GLTranslate.Providers.GoogleCloud.Internal;
+using GLTranslate.Providers.Common;
 
 namespace GLTranslate.Providers.GoogleCloud;
 
@@ -20,12 +19,12 @@ namespace GLTranslate.Providers.GoogleCloud;
 /// given is.
 /// </para>
 /// </remarks>
-public sealed class GoogleCloudMarkupTranslationProvider : IMarkupTranslationProvider, IDisposable
+public sealed class GoogleCloudMarkupTranslationProvider : MarkupTranslationProviderBase, IDisposable
 {
     private readonly GoogleCloudEngine _engine;
 
     /// <inheritdoc/>
-    public string Name => GoogleCloudProvider.Name;
+    public override string Name => GoogleCloudProvider.Name;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GoogleCloudMarkupTranslationProvider"/> class.
@@ -37,6 +36,7 @@ public sealed class GoogleCloudMarkupTranslationProvider : IMarkupTranslationPro
     /// Thrown when <paramref name="credentials"/> is <see langword="null"/>.
     /// </exception>
     public GoogleCloudMarkupTranslationProvider(GoogleCloudCredentials credentials)
+        : base(GoogleCloudLanguageCodeResolver.Instance)
     {
         _engine = new GoogleCloudEngine(credentials);
     }
@@ -55,6 +55,7 @@ public sealed class GoogleCloudMarkupTranslationProvider : IMarkupTranslationPro
     /// Thrown when an argument is <see langword="null"/>.
     /// </exception>
     public GoogleCloudMarkupTranslationProvider(GoogleCloudCredentials credentials, HttpClient httpClient)
+        : base(GoogleCloudLanguageCodeResolver.Instance)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
 
@@ -62,42 +63,17 @@ public sealed class GoogleCloudMarkupTranslationProvider : IMarkupTranslationPro
     }
 
     /// <inheritdoc/>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="request"/> is <see langword="null"/>.
-    /// </exception>
-    /// <exception cref="ProviderException">
-    /// Thrown when a language of the request is unknown to GLTranslate, when
-    /// Google refuses the request, or when the answer cannot be read.
-    /// </exception>
-    public async Task<MarkupTranslationResult> ExecuteAsync(
-        MarkupTranslationRequest request,
-        CancellationToken cancellationToken = default)
+    protected override async Task<ProviderTranslation> TranslateAsync(
+        string markup,
+        string? sourceLanguageCode,
+        string targetLanguageCode,
+        CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
-        string targetCode = GoogleCloudLanguageCodeResolver.ToGoogleCloudCode(request.TargetLanguageId);
-
-        string? sourceCode = request.SourceLanguageId is null
-            ? null
-            : GoogleCloudLanguageCodeResolver.ToGoogleCloudCode(request.SourceLanguageId);
-
         (IReadOnlyList<string> translations, string? detectedSourceCode) = await _engine
-            .TranslateAsync([request.Markup.Value], isMarkup: true, sourceCode, targetCode, cancellationToken)
+            .TranslateAsync([markup], isMarkup: true, sourceLanguageCode, targetLanguageCode, cancellationToken)
             .ConfigureAwait(false);
 
-        LanguageId resolvedSourceLanguageId = request.SourceLanguageId
-            ?? (string.IsNullOrWhiteSpace(detectedSourceCode)
-                ? throw new ProviderException(
-                    GoogleCloudProvider.Name,
-                    "Google Cloud named no source language, although none was given.")
-                : GoogleCloudLanguageCodeResolver.FromGoogleCloudCode(detectedSourceCode));
-
-        return new MarkupTranslationResult(
-            request.Id,
-            new ProviderMarkup(translations[0]),
-            resolvedSourceLanguageId,
-            request.TargetLanguageId,
-            wasSourceLanguageDetected: request.SourceLanguageId is null);
+        return new ProviderTranslation(translations[0], detectedSourceCode);
     }
 
     /// <inheritdoc/>

@@ -13,7 +13,10 @@ namespace GLTranslate.Providers.YandexCloud.Internal;
 /// </remarks>
 internal static class YandexCloudLanguageCodeResolver
 {
-    private static readonly LanguageCodeResolver Resolver = new(YandexCloudProvider.Name);
+    /// <summary>
+    /// Gets how the languages of GLTranslate are written in the provider's terms.
+    /// </summary>
+    internal static LanguageCodeResolver Instance { get; } = new(YandexCloudProvider.Name);
 
     /// <summary>
     /// Gets the Yandex Cloud code of a language.
@@ -33,7 +36,7 @@ internal static class YandexCloudLanguageCodeResolver
     /// </exception>
     public static string ToYandexCloudCode(LanguageId languageId)
     {
-        return Resolver.ToProviderCode(languageId);
+        return Instance.ToProviderCode(languageId);
     }
 
     /// <summary>
@@ -54,6 +57,6 @@ internal static class YandexCloudLanguageCodeResolver
     /// </exception>
     public static LanguageId FromYandexCloudCode(string yandexCloudLanguageCode)
     {
-        return Resolver.FromProviderCode(yandexCloudLanguageCode);
+        return Instance.FromProviderCode(yandexCloudLanguageCode);
     }
 }

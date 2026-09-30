@@ -147,6 +147,10 @@ public sealed class LanguageCodeResolver
     /// <exception cref="ArgumentNullException">
     /// Thrown when <paramref name="providerLanguageCode"/> is <see langword="null"/>.
     /// </exception>
+    /// <remarks>
+    /// A code with a region or a script the resolver has no entry for, such as
+    /// <c>pt-BR</c>, is read as the language of its first part.
+    /// </remarks>
     /// <exception cref="ArgumentException">
     /// Thrown when <paramref name="providerLanguageCode"/> is empty or consists
     /// only of white-space characters.
@@ -166,7 +170,8 @@ public sealed class LanguageCodeResolver
             code = iso6391;
         }
 
-        if (!LanguagesByIso6391.Value.TryGetValue(code.ToLowerInvariant(), out LanguageId? languageId))
+        if (!LanguagesByIso6391.Value.TryGetValue(code.ToLowerInvariant(), out LanguageId? languageId)
+            && !TryGetByPrimarySubtag(code, out languageId))
         {
             // The provider answered with a language code that is not known to GLTranslate.
             throw new ProviderException(
@@ -175,6 +180,57 @@ public sealed class LanguageCodeResolver
         }
 
         return languageId;
+    }
+
+    /// <summary>
+    /// Tells which language a text was in: the one the request named or, when it
+    /// named none, the one the provider detected.
+    /// </summary>
+    /// <param name="requested">
+    /// The language the request named, or <see langword="null"/> when it left
+    /// the provider to detect it.
+    /// </param>
+    /// <param name="detectedProviderCode">
+    /// The language code the provider answered with, which it reports only when
+    /// it detected the language.
+    /// </param>
+    /// <returns>
+    /// <paramref name="requested"/> when there is one; otherwise the language
+    /// <paramref name="detectedProviderCode"/> stands for.
+    /// </returns>
+    /// <exception cref="ProviderException">
+    /// Thrown when the request named no language and the provider named none
+    /// either, or named one unknown to GLTranslate.
+    /// </exception>
+    public LanguageId ResolveSource(LanguageId? requested, string? detectedProviderCode)
+    {
+        if (requested is not null)
+        {
+            return requested;
+        }
+
+        return string.IsNullOrWhiteSpace(detectedProviderCode)
+            ? throw new ProviderException(
+                _providerName,
+                $"{_providerName} detected no source language, although none was given.")
+            : FromProviderCode(detectedProviderCode);
+    }
+
+    private static bool TryGetByPrimarySubtag(string code, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out LanguageId? languageId)
+    {
+        // A code a provider writes with a region or a script, as in "zh-CN" or
+        // "sr-Latn", names the language of its first part when the provider gave
+        // no name of its own to the whole.
+        int separator = code.IndexOf('-', StringComparison.Ordinal);
+
+        if (separator > 0 && LanguagesByIso6391.Value.TryGetValue(code[..separator].ToLowerInvariant(), out languageId))
+        {
+            return true;
+        }
+
+        languageId = null;
+
+        return false;
     }
 
     private static ImmutableDictionary<string, LanguageId> BuildIndex()

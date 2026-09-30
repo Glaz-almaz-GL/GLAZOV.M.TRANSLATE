@@ -1,7 +1,6 @@
-using GLTranslate.Abstractions.Linguistics.Languages;
-using GLTranslate.Abstractions.Providers;
 using GLTranslate.Abstractions.Translation;
 using GLTranslate.Providers.Yandex.Internal;
+using GLTranslate.Providers.Common;
 
 namespace GLTranslate.Providers.Yandex;
 
@@ -19,17 +18,18 @@ namespace GLTranslate.Providers.Yandex;
 /// given is.
 /// </para>
 /// </remarks>
-public sealed class YandexMarkupTranslationProvider : IMarkupTranslationProvider, IDisposable
+public sealed class YandexMarkupTranslationProvider : MarkupTranslationProviderBase, IDisposable
 {
     private readonly YandexEngine _engine;
 
     /// <inheritdoc/>
-    public string Name => YandexProvider.Name;
+    public override string Name => YandexProvider.Name;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="YandexMarkupTranslationProvider"/> class.
     /// </summary>
     public YandexMarkupTranslationProvider()
+        : base(YandexLanguageCodeResolver.Instance)
     {
         _engine = new YandexEngine();
     }
@@ -45,6 +45,7 @@ public sealed class YandexMarkupTranslationProvider : IMarkupTranslationProvider
     /// Thrown when <paramref name="httpClient"/> is <see langword="null"/>.
     /// </exception>
     public YandexMarkupTranslationProvider(HttpClient httpClient)
+        : base(YandexLanguageCodeResolver.Instance)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
 
@@ -52,39 +53,17 @@ public sealed class YandexMarkupTranslationProvider : IMarkupTranslationProvider
     }
 
     /// <inheritdoc/>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="request"/> is <see langword="null"/>.
-    /// </exception>
-    /// <exception cref="ProviderException">
-    /// Thrown when a language of the request is unknown to GLTranslate, when
-    /// Yandex refuses the direction, when the request fails, or when the
-    /// endpoint answers with something the provider cannot read.
-    /// </exception>
-    public async Task<MarkupTranslationResult> ExecuteAsync(
-        MarkupTranslationRequest request,
-        CancellationToken cancellationToken = default)
+    protected override async Task<ProviderTranslation> TranslateAsync(
+        string markup,
+        string? sourceLanguageCode,
+        string targetLanguageCode,
+        CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
-        string targetCode = YandexLanguageCodeResolver.ToYandexCode(request.TargetLanguageId);
-
-        string? sourceCode = request.SourceLanguageId is null
-            ? null
-            : YandexLanguageCodeResolver.ToYandexCode(request.SourceLanguageId);
-
         (string translatedMarkup, string detectedSourceCode) = await _engine
-            .TranslateMarkupAsync(request.Markup.Value, targetCode, sourceCode, cancellationToken)
+            .TranslateMarkupAsync(markup, targetLanguageCode, sourceLanguageCode, cancellationToken)
             .ConfigureAwait(false);
 
-        LanguageId resolvedSourceLanguageId = request.SourceLanguageId
-            ?? YandexLanguageCodeResolver.FromYandexCode(detectedSourceCode);
-
-        return new MarkupTranslationResult(
-            request.Id,
-            new ProviderMarkup(translatedMarkup),
-            resolvedSourceLanguageId,
-            request.TargetLanguageId,
-            wasSourceLanguageDetected: request.SourceLanguageId is null);
+        return new ProviderTranslation(translatedMarkup, detectedSourceCode);
     }
 
     /// <inheritdoc/>

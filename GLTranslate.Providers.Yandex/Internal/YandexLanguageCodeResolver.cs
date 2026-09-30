@@ -14,7 +14,10 @@ namespace GLTranslate.Providers.Yandex.Internal;
 /// </remarks>
 internal static class YandexLanguageCodeResolver
 {
-    private static readonly LanguageCodeResolver Resolver = new(YandexProvider.Name);
+    /// <summary>
+    /// Gets how the languages of GLTranslate are written in the provider's terms.
+    /// </summary>
+    internal static LanguageCodeResolver Instance { get; } = new(YandexProvider.Name);
 
     /// <summary>
     /// Converts a <see cref="LanguageId"/> into the code the endpoints expect.
@@ -34,7 +37,7 @@ internal static class YandexLanguageCodeResolver
     /// </exception>
     public static string ToYandexCode(LanguageId languageId)
     {
-        return Resolver.ToProviderCode(languageId);
+        return Instance.ToProviderCode(languageId);
     }
 
     /// <summary>
@@ -57,6 +60,6 @@ internal static class YandexLanguageCodeResolver
     /// </exception>
     public static LanguageId FromYandexCode(string yandexLanguageCode)
     {
-        return Resolver.FromProviderCode(yandexLanguageCode);
+        return Instance.FromProviderCode(yandexLanguageCode);
     }
 }

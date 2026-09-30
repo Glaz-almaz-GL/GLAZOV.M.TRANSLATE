@@ -13,7 +13,10 @@ namespace GLTranslate.Providers.GoogleCloud.Internal;
 /// </remarks>
 internal static class GoogleCloudLanguageCodeResolver
 {
-    private static readonly LanguageCodeResolver Resolver = new(GoogleCloudProvider.Name);
+    /// <summary>
+    /// Gets how the languages of GLTranslate are written in the provider's terms.
+    /// </summary>
+    internal static LanguageCodeResolver Instance { get; } = new(GoogleCloudProvider.Name);
 
     /// <summary>
     /// Gets the Google Cloud code of a language.
@@ -33,7 +36,7 @@ internal static class GoogleCloudLanguageCodeResolver
     /// </exception>
     public static string ToGoogleCloudCode(LanguageId languageId)
     {
-        return Resolver.ToProviderCode(languageId);
+        return Instance.ToProviderCode(languageId);
     }
 
     /// <summary>
@@ -55,11 +58,6 @@ internal static class GoogleCloudLanguageCodeResolver
     /// </exception>
     public static LanguageId FromGoogleCloudCode(string googleCloudLanguageCode)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(googleCloudLanguageCode);
-
-        string code = googleCloudLanguageCode.Trim();
-        int separator = code.IndexOf('-');
-
-        return Resolver.FromProviderCode(separator > 0 ? code[..separator] : code);
+        return Instance.FromProviderCode(googleCloudLanguageCode);
     }
 }

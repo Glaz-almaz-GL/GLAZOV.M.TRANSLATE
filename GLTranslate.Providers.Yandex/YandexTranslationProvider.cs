@@ -1,7 +1,6 @@
-using GLTranslate.Abstractions.Linguistics.Languages;
-using GLTranslate.Abstractions.Providers;
 using GLTranslate.Abstractions.Translation;
 using GLTranslate.Providers.Yandex.Internal;
+using GLTranslate.Providers.Common;
 
 namespace GLTranslate.Providers.Yandex;
 
@@ -18,17 +17,18 @@ namespace GLTranslate.Providers.Yandex;
 /// given is.
 /// </para>
 /// </remarks>
-public sealed class YandexTranslationProvider : ITextTranslationProvider, IDisposable
+public sealed class YandexTranslationProvider : TextTranslationProviderBase, IDisposable
 {
     private readonly YandexEngine _engine;
 
     /// <inheritdoc/>
-    public string Name => YandexProvider.Name;
+    public override string Name => YandexProvider.Name;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="YandexTranslationProvider"/> class.
     /// </summary>
     public YandexTranslationProvider()
+        : base(YandexLanguageCodeResolver.Instance)
     {
         _engine = new YandexEngine();
     }
@@ -44,6 +44,7 @@ public sealed class YandexTranslationProvider : ITextTranslationProvider, IDispo
     /// Thrown when <paramref name="httpClient"/> is <see langword="null"/>.
     /// </exception>
     public YandexTranslationProvider(HttpClient httpClient)
+        : base(YandexLanguageCodeResolver.Instance)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
 
@@ -51,39 +52,17 @@ public sealed class YandexTranslationProvider : ITextTranslationProvider, IDispo
     }
 
     /// <inheritdoc/>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="request"/> is <see langword="null"/>.
-    /// </exception>
-    /// <exception cref="ProviderException">
-    /// Thrown when a language of the request is unknown to GLTranslate, when
-    /// Yandex refuses the direction, when the request fails, or when the
-    /// endpoint answers with something the provider cannot read.
-    /// </exception>
-    public async Task<TextTranslationResult> ExecuteAsync(
-        TextTranslationRequest request,
-        CancellationToken cancellationToken = default)
+    protected override async Task<ProviderTranslation> TranslateAsync(
+        string text,
+        string? sourceLanguageCode,
+        string targetLanguageCode,
+        CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
-        string targetCode = YandexLanguageCodeResolver.ToYandexCode(request.TargetLanguageId);
-
-        string? sourceCode = request.SourceLanguageId is null
-            ? null
-            : YandexLanguageCodeResolver.ToYandexCode(request.SourceLanguageId);
-
         (string translatedText, string detectedSourceCode) = await _engine
-            .TranslateAsync(request.Text.Value, targetCode, sourceCode, cancellationToken)
+            .TranslateAsync(text, targetLanguageCode, sourceLanguageCode, cancellationToken)
             .ConfigureAwait(false);
 
-        LanguageId resolvedSourceLanguageId = request.SourceLanguageId
-            ?? YandexLanguageCodeResolver.FromYandexCode(detectedSourceCode);
-
-        return new TextTranslationResult(
-            request.Id,
-            new ProviderText(translatedText),
-            resolvedSourceLanguageId,
-            request.TargetLanguageId,
-            wasSourceLanguageDetected: request.SourceLanguageId is null);
+        return new ProviderTranslation(translatedText, detectedSourceCode);
     }
 
     /// <inheritdoc/>
