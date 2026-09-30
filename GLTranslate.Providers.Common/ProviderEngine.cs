@@ -113,6 +113,44 @@ public abstract class ProviderEngine : IDisposable
     }
 
     /// <summary>
+    /// Builds the failure that reports a request the provider refused, by the
+    /// status of its HTTP answer.
+    /// </summary>
+    /// <param name="status">
+    /// The HTTP status of the answer.
+    /// </param>
+    /// <param name="explanation">
+    /// What the provider said was wrong, or <see langword="null"/> when it said
+    /// nothing.
+    /// </param>
+    /// <returns>
+    /// The failure to throw.
+    /// </returns>
+    protected ProviderException Refused(int status, string? explanation)
+    {
+        return Refused("status", status, explanation);
+    }
+
+    /// <summary>
+    /// Builds the failure that reports a request the provider refused, by an error
+    /// code of its own that its answer carries.
+    /// </summary>
+    /// <param name="code">
+    /// The error code of the answer.
+    /// </param>
+    /// <param name="explanation">
+    /// What the provider said was wrong, or <see langword="null"/> when it said
+    /// nothing.
+    /// </param>
+    /// <returns>
+    /// The failure to throw.
+    /// </returns>
+    protected ProviderException RefusedWithCode(int code, string? explanation)
+    {
+        return Refused("code", code, explanation);
+    }
+
+    /// <summary>
     /// Builds the failure that reports an answer the engine cannot read.
     /// </summary>
     /// <param name="innerException">
@@ -124,6 +162,15 @@ public abstract class ProviderEngine : IDisposable
     protected ProviderException UnreadableAnswer(Exception innerException)
     {
         return new ProviderException(ProviderName, $"{ProviderName} returned an unexpected response format.", innerException);
+    }
+
+    private ProviderException Refused(string kind, int number, string? explanation)
+    {
+        string reason = $"{ProviderName} refused the request with {kind} {number.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+
+        return new ProviderException(
+            ProviderName,
+            string.IsNullOrWhiteSpace(explanation) ? $"{reason}." : $"{reason}: {explanation}");
     }
 
     /// <summary>

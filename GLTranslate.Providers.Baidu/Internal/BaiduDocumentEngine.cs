@@ -289,7 +289,7 @@ internal sealed class BaiduDocumentEngine : BaiduSignedEngine
         }
     }
 
-    private static BaiduJobData ReadJob(BaiduJobResponse? answer)
+    private BaiduJobData ReadJob(BaiduJobResponse? answer)
     {
         if (answer is null)
         {

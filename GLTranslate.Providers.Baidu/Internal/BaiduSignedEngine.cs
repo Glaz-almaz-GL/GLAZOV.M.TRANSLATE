@@ -19,10 +19,8 @@ namespace GLTranslate.Providers.Baidu.Internal;
 /// take the application, the time and the signature as the headers
 /// <c>X-Appid</c>, <c>X-Timestamp</c> and <c>X-Sign</c>.
 /// </remarks>
-internal abstract class BaiduSignedEngine : ProviderEngine
+internal abstract class BaiduSignedEngine : BaiduEngineBase
 {
-    private readonly BaiduCredentials _credentials;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="BaiduSignedEngine"/> class
     /// with an <see cref="HttpClient"/> of its own.
@@ -34,11 +32,8 @@ internal abstract class BaiduSignedEngine : ProviderEngine
     /// Thrown when <paramref name="credentials"/> is <see langword="null"/>.
     /// </exception>
     protected BaiduSignedEngine(BaiduCredentials credentials)
-        : base(BaiduProvider.Name)
+        : base(credentials)
     {
-        ArgumentNullException.ThrowIfNull(credentials);
-
-        _credentials = credentials;
     }
 
     /// <summary>
@@ -55,11 +50,8 @@ internal abstract class BaiduSignedEngine : ProviderEngine
     /// Thrown when an argument is <see langword="null"/>.
     /// </exception>
     protected BaiduSignedEngine(BaiduCredentials credentials, HttpClient httpClient)
-        : base(BaiduProvider.Name, httpClient)
+        : base(credentials, httpClient)
     {
-        ArgumentNullException.ThrowIfNull(credentials);
-
-        _credentials = credentials;
     }
 
     /// <summary>
@@ -104,11 +96,11 @@ internal abstract class BaiduSignedEngine : ProviderEngine
             Content = new StringContent(body, Encoding.UTF8, new MediaTypeHeaderValue("application/json")),
         };
 
-        httpRequest.Headers.Add("X-Appid", _credentials.AppId);
+        httpRequest.Headers.Add("X-Appid", Credentials.AppId);
         httpRequest.Headers.Add("X-Timestamp", timestamp);
         httpRequest.Headers.Add(
             "X-Sign",
-            BaiduSignature.ForHeaders(_credentials.AppId, timestamp, signedPayload ?? body, _credentials.SecretKey));
+            BaiduSignature.ForHeaders(Credentials.AppId, timestamp, signedPayload ?? body, Credentials.SecretKey));
 
         try
         {
@@ -130,33 +122,5 @@ internal abstract class BaiduSignedEngine : ProviderEngine
         {
             throw UnreadableAnswer(exception);
         }
-    }
-
-    /// <summary>
-    /// Throws when the answer reports a failure.
-    /// </summary>
-    /// <param name="code">
-    /// The code of the answer; zero means success.
-    /// </param>
-    /// <param name="message">
-    /// The explanation of the answer.
-    /// </param>
-    /// <exception cref="ProviderException">
-    /// Thrown when <paramref name="code"/> is not zero.
-    /// </exception>
-    protected static void Ensure(int code, string? message)
-    {
-        if (code == 0)
-        {
-            return;
-        }
-
-        string number = code.ToString(CultureInfo.InvariantCulture);
-
-        throw new ProviderException(
-            BaiduProvider.Name,
-            string.IsNullOrWhiteSpace(message)
-                ? $"Baidu refused the request with code {number}."
-                : $"Baidu refused the request with code {number}: {message}");
     }
 }

@@ -22,7 +22,7 @@ namespace GLTranslate.Providers.Baidu.Internal;
 /// third, which wants the bytes as a file of a form and the rest in the query.
 /// </para>
 /// </remarks>
-internal sealed class BaiduEngine : ProviderEngine
+internal sealed class BaiduEngine : BaiduEngineBase
 {
     private const string TextUrl = "https://fanyi-api.baidu.com/api/trans/vip/translate";
 
@@ -39,8 +39,6 @@ internal sealed class BaiduEngine : ProviderEngine
 
     private const string AutoLanguage = "auto";
 
-    private readonly BaiduCredentials _credentials;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="BaiduEngine"/> class with
     /// an <see cref="HttpClient"/> of its own.
@@ -52,11 +50,8 @@ internal sealed class BaiduEngine : ProviderEngine
     /// Thrown when <paramref name="credentials"/> is <see langword="null"/>.
     /// </exception>
     public BaiduEngine(BaiduCredentials credentials)
-        : base(BaiduProvider.Name)
+        : base(credentials)
     {
-        ArgumentNullException.ThrowIfNull(credentials);
-
-        _credentials = credentials;
     }
 
     /// <summary>
@@ -73,11 +68,8 @@ internal sealed class BaiduEngine : ProviderEngine
     /// Thrown when an argument is <see langword="null"/>.
     /// </exception>
     public BaiduEngine(BaiduCredentials credentials, HttpClient httpClient)
-        : base(BaiduProvider.Name, httpClient)
+        : base(credentials, httpClient)
     {
-        ArgumentNullException.ThrowIfNull(credentials);
-
-        _credentials = credentials;
     }
 
     /// <summary>
@@ -229,16 +221,16 @@ internal sealed class BaiduEngine : ProviderEngine
 
         string salt = NewSalt();
         string sign = BaiduSignature.ForImage(
-            _credentials.AppId,
+            Credentials.AppId,
             image.Span,
             salt,
             DeviceId,
             Mac,
-            _credentials.SecretKey);
+            Credentials.SecretKey);
 
         string url = $"{PictureUrl}?from={Uri.EscapeDataString(sourceLanguageCode ?? AutoLanguage)}" +
                      $"&to={Uri.EscapeDataString(targetLanguageCode)}" +
-                     $"&appid={Uri.EscapeDataString(_credentials.AppId)}" +
+                     $"&appid={Uri.EscapeDataString(Credentials.AppId)}" +
                      $"&salt={salt}&cuid={DeviceId}&mac={Mac}&version={PictureVersion}&paste=0&sign={sign}";
 
         using MultipartFormDataContent content = [];
@@ -261,7 +253,7 @@ internal sealed class BaiduEngine : ProviderEngine
             throw new ProviderException(BaiduProvider.Name, "Baidu returned an empty response.");
         }
 
-        Ensure(answer.ErrorCode, answer.ErrorMessage);
+        EnsureAnswer(answer.ErrorCode, answer.ErrorMessage);
 
         return answer.Data ?? new BaiduPictureData();
     }
@@ -282,14 +274,14 @@ internal sealed class BaiduEngine : ProviderEngine
 
         // The signature is made over the text as it is, before the form encodes
         // it: signing the encoded text is the mistake the platform warns about.
-        string sign = BaiduSignature.ForText(_credentials.AppId, text, salt, _credentials.SecretKey);
+        string sign = BaiduSignature.ForText(Credentials.AppId, text, salt, Credentials.SecretKey);
 
         List<KeyValuePair<string, string>> fields =
         [
             new("q", text),
             new("from", sourceLanguageCode ?? AutoLanguage),
             new("to", targetLanguageCode),
-            new("appid", _credentials.AppId),
+            new("appid", Credentials.AppId),
             new("salt", salt),
             new("sign", sign),
             .. extraFields,
@@ -306,7 +298,7 @@ internal sealed class BaiduEngine : ProviderEngine
             throw new ProviderException(BaiduProvider.Name, "Baidu returned an empty response.");
         }
 
-        Ensure(answer.ErrorCode, answer.ErrorMessage);
+        EnsureAnswer(answer.ErrorCode, answer.ErrorMessage);
 
         if (answer.Lines is not { Count: > 0 } lines || lines.Any(line => line.Destination is null))
         {
@@ -356,20 +348,11 @@ internal sealed class BaiduEngine : ProviderEngine
         }
     }
 
-    private static void Ensure(int errorCode, string? errorMessage)
+    private void EnsureAnswer(int errorCode, string? errorMessage)
     {
         // Baidu reports 0 for a success on the image endpoint and 52000 on the
         // platform's newer text ones; a text answer without a code succeeded too.
-        if (errorCode is 0 or 52000)
-        {
-            return;
-        }
-
-        throw new ProviderException(
-            BaiduProvider.Name,
-            string.IsNullOrWhiteSpace(errorMessage)
-                ? $"Baidu refused the request with code {errorCode.ToString(CultureInfo.InvariantCulture)}."
-                : $"Baidu refused the request with code {errorCode.ToString(CultureInfo.InvariantCulture)}: {errorMessage}");
+        Ensure(errorCode == 52000 ? 0 : errorCode, errorMessage);
     }
 
     private static string NewSalt()

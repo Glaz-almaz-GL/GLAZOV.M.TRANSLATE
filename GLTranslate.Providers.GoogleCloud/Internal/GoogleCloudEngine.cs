@@ -25,7 +25,7 @@ namespace GLTranslate.Providers.GoogleCloud.Internal;
 /// its explanation in the body, which is what the exception reports.
 /// </para>
 /// </remarks>
-internal sealed class GoogleCloudEngine : ProviderEngine
+internal sealed class GoogleCloudEngine : CredentialedEngine<GoogleCloudCredentials>
 {
     private const string TranslationUrl = "https://translation.googleapis.com/language/translate/v2";
     private const string SynthesisUrl = "https://texttospeech.googleapis.com/v1/text:synthesize";
@@ -37,8 +37,6 @@ internal sealed class GoogleCloudEngine : ProviderEngine
 
     // Text-to-Speech takes 5,000 bytes of text in a request at most.
     private const int MaxSpeechBytes = 5000;
-
-    private readonly GoogleCloudCredentials _credentials;
 
     private readonly ConcurrentDictionary<string, string> _voiceLanguages = new(StringComparer.Ordinal);
 
@@ -53,11 +51,8 @@ internal sealed class GoogleCloudEngine : ProviderEngine
     /// Thrown when <paramref name="credentials"/> is <see langword="null"/>.
     /// </exception>
     public GoogleCloudEngine(GoogleCloudCredentials credentials)
-        : base(GoogleCloudProvider.Name)
+        : base(GoogleCloudProvider.Name, credentials)
     {
-        ArgumentNullException.ThrowIfNull(credentials);
-
-        _credentials = credentials;
     }
 
     /// <summary>
@@ -74,11 +69,8 @@ internal sealed class GoogleCloudEngine : ProviderEngine
     /// Thrown when an argument is <see langword="null"/>.
     /// </exception>
     public GoogleCloudEngine(GoogleCloudCredentials credentials, HttpClient httpClient)
-        : base(GoogleCloudProvider.Name, httpClient)
+        : base(GoogleCloudProvider.Name, credentials, httpClient)
     {
-        ArgumentNullException.ThrowIfNull(credentials);
-
-        _credentials = credentials;
     }
 
     /// <summary>
@@ -387,7 +379,7 @@ internal sealed class GoogleCloudEngine : ProviderEngine
         JsonTypeInfo<TResponse> responseTypeInfo,
         CancellationToken cancellationToken)
     {
-        httpRequest.Headers.Add("X-Goog-Api-Key", _credentials.ApiKey);
+        httpRequest.Headers.Add("X-Goog-Api-Key", Credentials.ApiKey);
 
         try
         {
@@ -416,7 +408,7 @@ internal sealed class GoogleCloudEngine : ProviderEngine
         }
     }
 
-    private static async Task<ProviderException> ReadRefusalAsync(
+    private async Task<ProviderException> ReadRefusalAsync(
         HttpResponseMessage httpResponse,
         CancellationToken cancellationToken)
     {
@@ -437,16 +429,5 @@ internal sealed class GoogleCloudEngine : ProviderEngine
         }
 
         return Refused((int)httpResponse.StatusCode, message);
-    }
-
-    private static ProviderException Refused(int code, string? message)
-    {
-        string number = code.ToString(CultureInfo.InvariantCulture);
-
-        return new ProviderException(
-            GoogleCloudProvider.Name,
-            string.IsNullOrWhiteSpace(message)
-                ? $"Google Cloud refused the request with status {number}."
-                : $"Google Cloud refused the request with status {number}: {message}");
     }
 }

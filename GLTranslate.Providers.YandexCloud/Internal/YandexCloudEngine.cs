@@ -22,7 +22,7 @@ namespace GLTranslate.Providers.YandexCloud.Internal;
 /// back with its explanation in the body, which is what the exception reports.
 /// </para>
 /// </remarks>
-internal sealed class YandexCloudEngine : ProviderEngine
+internal sealed class YandexCloudEngine : CredentialedEngine<YandexCloudCredentials>
 {
     private const string TranslationUrl = "https://translate.api.cloud.yandex.net/translate/v2/translate";
     private const string RecognitionUrl = "https://ocr.api.cloud.yandex.net/ocr/v1/recognizeText";
@@ -36,8 +36,6 @@ internal sealed class YandexCloudEngine : ProviderEngine
     private const int MaxSpeechCharacters = 5000;
     private const int MaxSpeechFormLength = 15 * 1024;
 
-    private readonly YandexCloudCredentials _credentials;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="YandexCloudEngine"/> class
     /// with an <see cref="HttpClient"/> of its own.
@@ -49,11 +47,8 @@ internal sealed class YandexCloudEngine : ProviderEngine
     /// Thrown when <paramref name="credentials"/> is <see langword="null"/>.
     /// </exception>
     public YandexCloudEngine(YandexCloudCredentials credentials)
-        : base(YandexCloudProvider.Name)
+        : base(YandexCloudProvider.Name, credentials)
     {
-        ArgumentNullException.ThrowIfNull(credentials);
-
-        _credentials = credentials;
     }
 
     /// <summary>
@@ -70,11 +65,8 @@ internal sealed class YandexCloudEngine : ProviderEngine
     /// Thrown when an argument is <see langword="null"/>.
     /// </exception>
     public YandexCloudEngine(YandexCloudCredentials credentials, HttpClient httpClient)
-        : base(YandexCloudProvider.Name, httpClient)
+        : base(YandexCloudProvider.Name, credentials, httpClient)
     {
-        ArgumentNullException.ThrowIfNull(credentials);
-
-        _credentials = credentials;
     }
 
     /// <summary>
@@ -150,7 +142,7 @@ internal sealed class YandexCloudEngine : ProviderEngine
                     SourceLanguageCode = sourceLanguageCode,
                     Format = isMarkup ? "HTML" : "PLAIN_TEXT",
                     Texts = batch,
-                    FolderId = _credentials.FolderId,
+                    FolderId = Credentials.FolderId,
                 },
                 YandexCloudJsonContext.Default.YandexCloudTranslateRequest,
                 YandexCloudJsonContext.Default.YandexCloudTranslateResponse,
@@ -222,9 +214,9 @@ internal sealed class YandexCloudEngine : ProviderEngine
             new("format", "mp3"),
         ];
 
-        if (_credentials.FolderId is not null)
+        if (Credentials.FolderId is not null)
         {
-            fields.Add(new("folderId", _credentials.FolderId));
+            fields.Add(new("folderId", Credentials.FolderId));
         }
 
         // The limit of the form is that of its encoded length, which a text of
@@ -324,9 +316,9 @@ internal sealed class YandexCloudEngine : ProviderEngine
         // not to; an image is the caller's, and is not offered.
         httpRequest.Headers.Add("x-data-logging-enabled", "false");
 
-        if (_credentials.FolderId is not null)
+        if (Credentials.FolderId is not null)
         {
-            httpRequest.Headers.Add("x-folder-id", _credentials.FolderId);
+            httpRequest.Headers.Add("x-folder-id", Credentials.FolderId);
         }
 
         byte[] bytes = await SendBytesAsync(httpRequest, cancellationToken).ConfigureAwait(false);
@@ -397,7 +389,7 @@ internal sealed class YandexCloudEngine : ProviderEngine
 
     private async Task<byte[]> SendBytesAsync(HttpRequestMessage httpRequest, CancellationToken cancellationToken)
     {
-        httpRequest.Headers.TryAddWithoutValidation("Authorization", $"Api-Key {_credentials.ApiKey}");
+        httpRequest.Headers.TryAddWithoutValidation("Authorization", $"Api-Key {Credentials.ApiKey}");
 
         try
         {
@@ -409,7 +401,7 @@ internal sealed class YandexCloudEngine : ProviderEngine
 
             // A refusal explains itself in its body, so the body is read before
             // the status is reported.
-            return httpResponse.IsSuccessStatusCode ? bytes : throw Refused((int)httpResponse.StatusCode, bytes);
+            return httpResponse.IsSuccessStatusCode ? bytes : throw ReadRefusal((int)httpResponse.StatusCode, bytes);
         }
         catch (HttpRequestException exception)
         {
@@ -417,7 +409,7 @@ internal sealed class YandexCloudEngine : ProviderEngine
         }
     }
 
-    private static ProviderException Refused(int status, byte[] body)
+    private ProviderException ReadRefusal(int status, byte[] body)
     {
         string? message = null;
 
@@ -431,12 +423,6 @@ internal sealed class YandexCloudEngine : ProviderEngine
             // has to do.
         }
 
-        string number = status.ToString(CultureInfo.InvariantCulture);
-
-        return new ProviderException(
-            YandexCloudProvider.Name,
-            string.IsNullOrWhiteSpace(message)
-                ? $"Yandex Cloud refused the request with status {number}."
-                : $"Yandex Cloud refused the request with status {number}: {message}");
+        return Refused(status, message);
     }
 }
