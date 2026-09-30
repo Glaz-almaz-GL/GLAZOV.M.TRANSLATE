@@ -16,6 +16,8 @@
   <Project Path="GLTranslate.Providers.Microsoft/GLTranslate.Providers.Microsoft.csproj" />
   <Project Path="GLTranslate.Providers.Microsoft.Tests/GLTranslate.Providers.Microsoft.Tests.csproj" />
   <Project Path="GLTranslate.Providers.Yandex/GLTranslate.Providers.Yandex.csproj" />
+  <Project Path="GLTranslate.Providers.YandexCloud/GLTranslate.Providers.YandexCloud.csproj" />
+  <Project Path="GLTranslate.Providers.YandexCloud.Tests/GLTranslate.Providers.YandexCloud.Tests.csproj" />
   <Project Path="GLTranslate.Providers.Yandex.Tests/GLTranslate.Providers.Yandex.Tests.csproj" />
   <Project Path="GLTranslate.Providers.Google.Tests/GLTranslate.Providers.Google.Tests.csproj" />
   <Project Path="tools/GLTranslate.Domain.Generator/GLTranslate.Domain.Generator.csproj" />
