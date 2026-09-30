@@ -29,7 +29,6 @@ public sealed class GoogleTextToSpeechProvider : ITextToSpeechProvider, IDisposa
     private static readonly AudioContentType Mp3ContentType = new("audio/mpeg");
 
     private readonly GoogleTextToSpeechEngine _engine;
-    private readonly HttpClient? _ownedHttpClient;
 
     /// <inheritdoc/>
     public string Name => GoogleProvider.Name;
@@ -40,8 +39,7 @@ public sealed class GoogleTextToSpeechProvider : ITextToSpeechProvider, IDisposa
     /// </summary>
     public GoogleTextToSpeechProvider()
     {
-        _ownedHttpClient = new HttpClient();
-        _engine = new GoogleTextToSpeechEngine(_ownedHttpClient);
+        _engine = new GoogleTextToSpeechEngine();
     }
 
     /// <summary>
@@ -121,6 +119,6 @@ public sealed class GoogleTextToSpeechProvider : ITextToSpeechProvider, IDisposa
     /// <inheritdoc/>
     public void Dispose()
     {
-        _ownedHttpClient?.Dispose();
+        _engine.Dispose();
     }
 }

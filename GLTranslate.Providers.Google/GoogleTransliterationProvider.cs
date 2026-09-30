@@ -2,6 +2,7 @@ using GLTranslate.Abstractions.Linguistics.Languages;
 using GLTranslate.Abstractions.Providers;
 using GLTranslate.Abstractions.Transliteration;
 using GLTranslate.Providers.Google.Internal;
+using GLTranslate.Providers.Common;
 
 namespace GLTranslate.Providers.Google;
 
@@ -26,22 +27,21 @@ namespace GLTranslate.Providers.Google;
 /// supplied <see cref="HttpClient"/> is not mutated after construction.
 /// </para>
 /// </remarks>
-public sealed class GoogleTransliterationProvider : ITransliterationProvider, IDisposable
+public sealed class GoogleTransliterationProvider : TransliterationProviderBase, IDisposable
 {
     private readonly GoogleTranslationEngine _engine;
-    private readonly HttpClient? _ownedHttpClient;
 
     /// <inheritdoc/>
-    public string Name => GoogleProvider.Name;
+    public override string Name => GoogleProvider.Name;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GoogleTransliterationProvider"/>
     /// class with an internally managed <see cref="HttpClient"/>.
     /// </summary>
     public GoogleTransliterationProvider()
+        : base(GoogleLanguageCodeResolver.Instance)
     {
-        _ownedHttpClient = new HttpClient();
-        _engine = new GoogleTranslationEngine(_ownedHttpClient);
+        _engine = new GoogleTranslationEngine();
     }
 
     /// <summary>
@@ -56,6 +56,7 @@ public sealed class GoogleTransliterationProvider : ITransliterationProvider, ID
     /// Thrown when <paramref name="httpClient"/> is <see langword="null"/>.
     /// </exception>
     public GoogleTransliterationProvider(HttpClient httpClient)
+        : base(GoogleLanguageCodeResolver.Instance)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
 
@@ -63,34 +64,23 @@ public sealed class GoogleTransliterationProvider : ITransliterationProvider, ID
     }
 
     /// <inheritdoc/>
-    /// <exception cref="ProviderException">
-    /// Thrown when <paramref name="request"/> specifies a language unknown
-    /// to GLTranslate, or when the underlying request to Google Translate
-    /// fails or returns an unexpected response.
-    /// </exception>
-    public async Task<TransliterationResult> ExecuteAsync(TransliterationRequest request, CancellationToken cancellationToken = default)
+    protected override async Task<ProviderTransliteration> TransliterateAsync(
+        string text,
+        LanguageId? languageId,
+        string? languageCode,
+        CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
-        string sourceCode = GoogleLanguageCodeResolver.ToGoogleCode(request.LanguageId);
-
+        // Google is asked to detect the language by naming "auto".
         (string transliteration, string detectedSourceCode) = await _engine
-            .TransliterateAsync(request.Text.Value, sourceCode, cancellationToken)
+            .TransliterateAsync(text, languageCode ?? GoogleLanguageCodeResolver.AutoDetectCode, cancellationToken)
             .ConfigureAwait(false);
 
-        LanguageId resolvedLanguageId = request.LanguageId
-            ?? GoogleLanguageCodeResolver.FromGoogleCode(detectedSourceCode);
-
-        return new TransliterationResult(
-            request.Id,
-            new TransliteratedText(transliteration),
-            resolvedLanguageId,
-            wasLanguageDetected: request.LanguageId is null);
+        return new ProviderTransliteration(transliteration, detectedSourceCode);
     }
 
     /// <inheritdoc/>
     public void Dispose()
     {
-        _ownedHttpClient?.Dispose();
+        _engine.Dispose();
     }
 }

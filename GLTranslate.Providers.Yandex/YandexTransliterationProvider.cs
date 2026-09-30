@@ -2,6 +2,7 @@ using GLTranslate.Abstractions.Linguistics.Languages;
 using GLTranslate.Abstractions.Providers;
 using GLTranslate.Abstractions.Transliteration;
 using GLTranslate.Providers.Yandex.Internal;
+using GLTranslate.Providers.Common;
 
 namespace GLTranslate.Providers.Yandex;
 
@@ -19,7 +20,7 @@ namespace GLTranslate.Providers.Yandex;
 /// given is.
 /// </para>
 /// </remarks>
-public sealed class YandexTransliterationProvider : ITransliterationProvider, IDisposable
+public sealed class YandexTransliterationProvider : TransliterationProviderBase, IDisposable
 {
     // The language whose writing system the text is rendered into: the Latin
     // script, which is what a transliteration is asked for.
@@ -28,12 +29,13 @@ public sealed class YandexTransliterationProvider : ITransliterationProvider, ID
     private readonly YandexEngine _engine;
 
     /// <inheritdoc/>
-    public string Name => YandexProvider.Name;
+    public override string Name => YandexProvider.Name;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="YandexTransliterationProvider"/> class.
     /// </summary>
     public YandexTransliterationProvider()
+        : base(YandexLanguageCodeResolver.Instance)
     {
         _engine = new YandexEngine();
     }
@@ -49,6 +51,7 @@ public sealed class YandexTransliterationProvider : ITransliterationProvider, ID
     /// Thrown when <paramref name="httpClient"/> is <see langword="null"/>.
     /// </exception>
     public YandexTransliterationProvider(HttpClient httpClient)
+        : base(YandexLanguageCodeResolver.Instance)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
 
@@ -56,37 +59,22 @@ public sealed class YandexTransliterationProvider : ITransliterationProvider, ID
     }
 
     /// <inheritdoc/>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="request"/> is <see langword="null"/>.
-    /// </exception>
-    /// <exception cref="ProviderException">
-    /// Thrown when the language is unknown to GLTranslate, when Yandex
-    /// refuses the pair, when the request fails, or when the endpoint answers
-    /// with something the provider cannot read.
-    /// </exception>
-    public async Task<TransliterationResult> ExecuteAsync(
-        TransliterationRequest request,
-        CancellationToken cancellationToken = default)
+    protected override async Task<ProviderTransliteration> TransliterateAsync(
+        string text,
+        LanguageId? languageId,
+        string? languageCode,
+        CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
-        bool wasLanguageDetected = request.LanguageId is null;
-
-        string sourceCode = request.LanguageId is null
-            ? await _engine.DetectLanguageAsync(request.Text.Value, cancellationToken).ConfigureAwait(false)
-            : YandexLanguageCodeResolver.ToYandexCode(request.LanguageId);
+        // The transliteration endpoint has to be told the language, so a request
+        // that names none has it detected first.
+        string sourceCode = languageCode
+            ?? await _engine.DetectLanguageAsync(text, cancellationToken).ConfigureAwait(false);
 
         string transliteratedText = await _engine
-            .TransliterateAsync(request.Text.Value, sourceCode, LatinLanguageCode, cancellationToken)
+            .TransliterateAsync(text, sourceCode, LatinLanguageCode, cancellationToken)
             .ConfigureAwait(false);
 
-        LanguageId languageId = request.LanguageId ?? YandexLanguageCodeResolver.FromYandexCode(sourceCode);
-
-        return new TransliterationResult(
-            request.Id,
-            new TransliteratedText(transliteratedText),
-            languageId,
-            wasLanguageDetected);
+        return new ProviderTransliteration(transliteratedText, sourceCode);
     }
 
     /// <inheritdoc/>

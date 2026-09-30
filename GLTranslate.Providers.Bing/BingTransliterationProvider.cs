@@ -2,6 +2,7 @@ using GLTranslate.Abstractions.Linguistics.Languages;
 using GLTranslate.Abstractions.Providers;
 using GLTranslate.Abstractions.Transliteration;
 using GLTranslate.Providers.Bing.Internal;
+using GLTranslate.Providers.Common;
 
 namespace GLTranslate.Providers.Bing;
 
@@ -25,7 +26,7 @@ namespace GLTranslate.Providers.Bing;
 /// given is.
 /// </para>
 /// </remarks>
-public sealed class BingTransliterationProvider : ITransliterationProvider, IDisposable
+public sealed class BingTransliterationProvider : TransliterationProviderBase, IDisposable
 {
     // The language to translate into while asking for the rendering. It only
     // has to be a language Bing translates into; the translation is discarded.
@@ -34,12 +35,13 @@ public sealed class BingTransliterationProvider : ITransliterationProvider, IDis
     private readonly BingEngine _engine;
 
     /// <inheritdoc/>
-    public string Name => BingProvider.Name;
+    public override string Name => BingProvider.Name;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BingTransliterationProvider"/> class.
     /// </summary>
     public BingTransliterationProvider()
+        : base(BingLanguageCodeResolver.Instance)
     {
         _engine = new BingEngine();
     }
@@ -55,6 +57,7 @@ public sealed class BingTransliterationProvider : ITransliterationProvider, IDis
     /// Thrown when <paramref name="httpClient"/> is <see langword="null"/>.
     /// </exception>
     public BingTransliterationProvider(HttpClient httpClient)
+        : base(BingLanguageCodeResolver.Instance)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
 
@@ -62,26 +65,14 @@ public sealed class BingTransliterationProvider : ITransliterationProvider, IDis
     }
 
     /// <inheritdoc/>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="request"/> is <see langword="null"/>.
-    /// </exception>
-    /// <exception cref="ProviderException">
-    /// Thrown when the language is unknown to GLTranslate, when the text is
-    /// already written in the Latin script, when Bing refuses the request, or
-    /// when the endpoint answers with something the provider cannot read.
-    /// </exception>
-    public async Task<TransliterationResult> ExecuteAsync(
-        TransliterationRequest request,
-        CancellationToken cancellationToken = default)
+    protected override async Task<ProviderTransliteration> TransliterateAsync(
+        string text,
+        LanguageId? languageId,
+        string? languageCode,
+        CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
-        string? sourceCode = request.LanguageId is null
-            ? null
-            : BingLanguageCodeResolver.ToBingCode(request.LanguageId);
-
         BingAnswer answer = await _engine
-            .TranslateAsync(request.Text.Value, TargetLanguageCode, sourceCode, cancellationToken)
+            .TranslateAsync(text, TargetLanguageCode, languageCode, cancellationToken)
             .ConfigureAwait(false);
 
         if (answer.InputTransliteration is not { } transliteratedText)
@@ -91,14 +82,7 @@ public sealed class BingTransliterationProvider : ITransliterationProvider, IDis
                 "Bing Translator rendered nothing: the text is already written in the Latin script.");
         }
 
-        LanguageId languageId = request.LanguageId
-            ?? BingLanguageCodeResolver.FromBingCode(answer.SourceLanguageCode);
-
-        return new TransliterationResult(
-            request.Id,
-            new TransliteratedText(transliteratedText),
-            languageId,
-            wasLanguageDetected: request.LanguageId is null);
+        return new ProviderTransliteration(transliteratedText, answer.SourceLanguageCode);
     }
 
     /// <inheritdoc/>

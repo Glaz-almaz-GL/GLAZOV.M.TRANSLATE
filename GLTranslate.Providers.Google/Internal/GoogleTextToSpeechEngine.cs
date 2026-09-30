@@ -31,6 +31,15 @@ internal sealed class GoogleTextToSpeechEngine : ProviderEngine
     private const int MaxChunkLength = 200;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="GoogleTextToSpeechEngine"/>
+    /// class with an <see cref="HttpClient"/> of its own.
+    /// </summary>
+    public GoogleTextToSpeechEngine()
+        : base(GoogleProvider.Name)
+    {
+    }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="GoogleTextToSpeechEngine"/> class.
     /// </summary>
     /// <param name="httpClient">

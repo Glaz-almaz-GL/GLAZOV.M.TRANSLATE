@@ -1,9 +1,11 @@
+using GLTranslate.Abstractions.Linguistics.Languages;
 using GLTranslate.Abstractions.Providers;
 using GLTranslate.Abstractions.Transliteration;
 using GLTranslate.Domain.Linguistics.Languages;
 using GLTranslate.Domain.Linguistics.Scripts;
 using GLTranslate.Domain.Linguistics.Scripts.Codes;
 using GLTranslate.Providers.Microsoft.Internal;
+using GLTranslate.Providers.Common;
 
 namespace GLTranslate.Providers.Microsoft;
 
@@ -22,19 +24,20 @@ namespace GLTranslate.Providers.Microsoft;
 /// given is.
 /// </para>
 /// </remarks>
-public sealed class MicrosoftTransliterationProvider : ITransliterationProvider, IDisposable
+public sealed class MicrosoftTransliterationProvider : TransliterationProviderBase, IDisposable
 {
     private const string LatinScriptCode = "Latn";
 
     private readonly MicrosoftTranslationEngine _engine;
 
     /// <inheritdoc/>
-    public string Name => MicrosoftProvider.Name;
+    public override string Name => MicrosoftProvider.Name;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MicrosoftTransliterationProvider"/> class.
     /// </summary>
     public MicrosoftTransliterationProvider()
+        : base(MicrosoftLanguageCodeResolver.Instance)
     {
         _engine = new MicrosoftTranslationEngine();
     }
@@ -50,6 +53,7 @@ public sealed class MicrosoftTransliterationProvider : ITransliterationProvider,
     /// Thrown when <paramref name="httpClient"/> is <see langword="null"/>.
     /// </exception>
     public MicrosoftTransliterationProvider(HttpClient httpClient)
+        : base(MicrosoftLanguageCodeResolver.Instance)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
 
@@ -57,22 +61,13 @@ public sealed class MicrosoftTransliterationProvider : ITransliterationProvider,
     }
 
     /// <inheritdoc/>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="request"/> is <see langword="null"/>.
-    /// </exception>
-    /// <exception cref="ProviderException">
-    /// Thrown when the request names no language, when the language is unknown
-    /// to Microsoft Translator, when the language is already written in the
-    /// Latin script, when the request fails, or when the endpoint answers with
-    /// something the provider cannot read.
-    /// </exception>
-    public async Task<TransliterationResult> ExecuteAsync(
-        TransliterationRequest request,
-        CancellationToken cancellationToken = default)
+    protected override async Task<ProviderTransliteration> TransliterateAsync(
+        string text,
+        LanguageId? languageId,
+        string? languageCode,
+        CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
-        if (request.LanguageId is null)
+        if (languageId is null || languageCode is null)
         {
             // Unlike translation, the endpoint has no detection to fall back on.
             throw new ProviderException(
@@ -80,21 +75,16 @@ public sealed class MicrosoftTransliterationProvider : ITransliterationProvider,
                 "Microsoft Translator cannot detect the language of a transliteration request: name it in the request.");
         }
 
-        string languageCode = MicrosoftLanguageCodeResolver.ToMicrosoftCode(request.LanguageId);
-        string fromScript = ResolveSourceScript(request.LanguageId);
+        string fromScript = ResolveSourceScript(languageId);
 
         string transliteratedText = await _engine
-            .TransliterateAsync(request.Text.Value, languageCode, fromScript, LatinScriptCode, cancellationToken)
+            .TransliterateAsync(text, languageCode, fromScript, LatinScriptCode, cancellationToken)
             .ConfigureAwait(false);
 
-        return new TransliterationResult(
-            request.Id,
-            new TransliteratedText(transliteratedText),
-            request.LanguageId,
-            wasLanguageDetected: false);
+        return new ProviderTransliteration(transliteratedText, null);
     }
 
-    private static string ResolveSourceScript(Abstractions.Linguistics.Languages.LanguageId languageId)
+    private static string ResolveSourceScript(LanguageId languageId)
     {
         Language language = LanguageRegistry.Default.Get(languageId);
         Script script = language.Scripts[0];
