@@ -88,7 +88,7 @@ public sealed class GoogleTextToSpeechProvider : ITextToSpeechProvider, IDisposa
         return new TextToSpeechResult(request.Id, audioData, AudioContentType.Mp3, request.LanguageId);
     }
 
-    private static void EnsureSpoken(LanguageId languageId)
+    internal static void EnsureSpoken(LanguageId languageId)
     {
         Language language;
 

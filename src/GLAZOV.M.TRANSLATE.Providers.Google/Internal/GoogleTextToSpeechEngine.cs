@@ -144,7 +144,7 @@ internal sealed class GoogleTextToSpeechEngine : ProviderEngine
         }
     }
 
-    private static IReadOnlyList<string> SplitIntoChunks(string text, int maxLength)
+    internal static IReadOnlyList<string> SplitIntoChunks(string text, int maxLength)
     {
         List<string> chunks = [];
         int start = 0;

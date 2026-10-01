@@ -37,9 +37,32 @@ public sealed record GoogleBatchExecuteOptions
     /// </remarks>
     public const int DefaultMaxTextLength = 5000;
 
+    /// <summary>
+    /// The default name of the web service's speech call.
+    /// </summary>
+    public const string DefaultSpeechRpcId = "jQ1olc";
+
+    /// <summary>
+    /// The default name of the web service's suggestion call.
+    /// </summary>
+    public const string DefaultSuggestionsRpcId = "AVdN8";
+
+    /// <summary>
+    /// The default longest text, in characters, spoken in one request.
+    /// </summary>
+    /// <remarks>
+    /// The service refuses a speech request of about two hundred and fifty
+    /// characters and accepts one of two hundred; longer text is cut into pieces
+    /// at spaces and the pieces are spoken one by one.
+    /// </remarks>
+    public const int DefaultMaxSpeechChunkLength = 200;
+
     private readonly string _serviceUrl = DefaultServiceUrl;
     private readonly string _rpcId = DefaultRpcId;
+    private readonly string _speechRpcId = DefaultSpeechRpcId;
+    private readonly string _suggestionsRpcId = DefaultSuggestionsRpcId;
     private readonly int _maxTextLength = DefaultMaxTextLength;
+    private readonly int _maxSpeechChunkLength = DefaultMaxSpeechChunkLength;
 
     /// <summary>
     /// Gets the address of the Google Translate web service, without a
@@ -81,6 +104,60 @@ public sealed record GoogleBatchExecuteOptions
             ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
             _rpcId = value;
+        }
+    }
+
+    /// <summary>
+    /// Gets the name of the web service's speech call. Defaults to
+    /// <see cref="DefaultSpeechRpcId"/>.
+    /// </summary>
+    /// <exception cref="ArgumentException">
+    /// Thrown when set to an empty or white-space value.
+    /// </exception>
+    public string SpeechRpcId
+    {
+        get => _speechRpcId;
+        init
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(value);
+
+            _speechRpcId = value;
+        }
+    }
+
+    /// <summary>
+    /// Gets the name of the web service's suggestion call. Defaults to
+    /// <see cref="DefaultSuggestionsRpcId"/>.
+    /// </summary>
+    /// <exception cref="ArgumentException">
+    /// Thrown when set to an empty or white-space value.
+    /// </exception>
+    public string SuggestionsRpcId
+    {
+        get => _suggestionsRpcId;
+        init
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(value);
+
+            _suggestionsRpcId = value;
+        }
+    }
+
+    /// <summary>
+    /// Gets the longest text, in characters, spoken in one request. Defaults to
+    /// <see cref="DefaultMaxSpeechChunkLength"/>.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when set to zero or a negative number.
+    /// </exception>
+    public int MaxSpeechChunkLength
+    {
+        get => _maxSpeechChunkLength;
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+
+            _maxSpeechChunkLength = value;
         }
     }
 

@@ -1,5 +1,6 @@
 using GLAZOV.M.TRANSLATE.Abstractions.Providers;
 using GLAZOV.M.TRANSLATE.Providers.Common;
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
@@ -7,20 +8,22 @@ using System.Text.Json;
 namespace GLAZOV.M.TRANSLATE.Providers.Google.Internal;
 
 /// <summary>
-/// Performs the HTTP call and the response reading required to translate text
-/// through the internal <c>batchexecute</c> service of the Google Translate web
-/// page.
+/// Performs the HTTP calls and the response reading required to translate,
+/// speak and suggest through the internal <c>batchexecute</c> service of the
+/// Google Translate web page.
 /// </summary>
 /// <remarks>
 /// <para>
 /// This is the provider's engine: it contains the business logic of the
-/// operation and is not part of the public API. Consumers depend on
-/// <see cref="GoogleBatchExecuteTranslationProvider"/> instead.
+/// operations and is not part of the public API. Consumers depend on
+/// <see cref="GoogleBatchExecuteTranslationProvider"/>,
+/// <see cref="GoogleBatchExecuteTextToSpeechProvider"/> or
+/// <see cref="GoogleSuggestionProvider"/> instead.
 /// </para>
 /// <para>
 /// The service wraps its answer twice: the body is a sequence of length-prefixed
-/// chunks, the first chunk is a JSON array, and inside it the translation is a
-/// JSON document written as a string. The positions inside the document are
+/// chunks, the first chunk is a JSON array, and inside it the result is a JSON
+/// document written as a string. The positions inside the document are
 /// undocumented, so every step checks the shape it expects and fails with a
 /// <see cref="ProviderException"/> naming the step instead of reading past the
 /// end of an array.
@@ -115,9 +118,195 @@ internal sealed class GoogleBatchExecuteEngine : ProviderEngine
                 nameof(text));
         }
 
+        string arguments = WriteJson(writer =>
+        {
+            writer.WriteStartArray();
+            writer.WriteStartArray();
+            writer.WriteStringValue(text);
+            writer.WriteStringValue(sourceLanguageCode);
+            writer.WriteStringValue(targetLanguageCode);
+            writer.WriteBooleanValue(true);
+            writer.WriteEndArray();
+            writer.WriteStartArray();
+            writer.WriteNullValue();
+            writer.WriteEndArray();
+            writer.WriteEndArray();
+        });
+
+        using JsonDocument document = await CallAsync(_options.RpcId, arguments, cancellationToken).ConfigureAwait(false);
+
+        try
+        {
+            string translation = JoinSentences(document.RootElement[1][0][0][5], text);
+
+            string? sourceCode = document.RootElement.GetArrayLength() > 2 && document.RootElement[2].ValueKind == JsonValueKind.String
+                ? document.RootElement[2].GetString()
+                : document.RootElement[1].GetArrayLength() > 3 && document.RootElement[1][3].ValueKind == JsonValueKind.String
+                    ? document.RootElement[1][3].GetString()
+                    : null;
+
+            return (translation, sourceCode);
+        }
+        catch (Exception exception) when (IsShapeError(exception))
+        {
+            throw UnreadableAnswer(exception);
+        }
+    }
+
+    /// <summary>
+    /// Speaks text of at most the configured chunk length.
+    /// </summary>
+    /// <param name="text">The text to speak.</param>
+    /// <param name="languageCode">The Google code of the language of the text.</param>
+    /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
+    /// <returns>A task that completes with the speech as MP3 data.</returns>
+    /// <exception cref="ArgumentException">
+    /// Thrown when a parameter is empty or white-space.
+    /// </exception>
+    /// <exception cref="ProviderException">
+    /// Thrown when the request fails, when Google refuses it, or when the answer
+    /// does not have the expected shape.
+    /// </exception>
+    public async Task<byte[]> SpeakChunkAsync(string text, string languageCode, CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        ArgumentException.ThrowIfNullOrWhiteSpace(text);
+        ArgumentException.ThrowIfNullOrWhiteSpace(languageCode);
+
+        string arguments = WriteJson(writer =>
+        {
+            writer.WriteStartArray();
+            writer.WriteStringValue(text);
+            writer.WriteStringValue(languageCode);
+            writer.WriteNullValue();
+            writer.WriteStringValue("null");
+            writer.WriteEndArray();
+        });
+
+        using JsonDocument document = await CallAsync(_options.SpeechRpcId, arguments, cancellationToken).ConfigureAwait(false);
+
+        try
+        {
+            return Convert.FromBase64String(document.RootElement[0].GetString()!);
+        }
+        catch (Exception exception) when (IsShapeError(exception) || exception is FormatException)
+        {
+            throw UnreadableAnswer(exception);
+        }
+    }
+
+    /// <summary>
+    /// Speaks text of any length: cuts it into pieces the service accepts, speaks
+    /// them at the same time and joins the audio in order.
+    /// </summary>
+    /// <param name="text">The text to speak.</param>
+    /// <param name="languageCode">The Google code of the language of the text.</param>
+    /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
+    /// <returns>A task that completes with the speech as MP3 data.</returns>
+    /// <exception cref="ArgumentException">
+    /// Thrown when a parameter is empty or white-space.
+    /// </exception>
+    /// <exception cref="ProviderException">
+    /// Thrown when a request fails, when Google refuses it, or when an answer
+    /// does not have the expected shape.
+    /// </exception>
+    public async Task<byte[]> SpeakAsync(string text, string languageCode, CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        ArgumentException.ThrowIfNullOrWhiteSpace(text);
+        ArgumentException.ThrowIfNullOrWhiteSpace(languageCode);
+
+        IReadOnlyList<string> chunks = GoogleTextToSpeechEngine.SplitIntoChunks(text, _options.MaxSpeechChunkLength);
+
+        byte[][] audio = await Task
+            .WhenAll(chunks.Select(chunk => SpeakChunkAsync(chunk, languageCode, cancellationToken)))
+            .ConfigureAwait(false);
+
+        // MP3 frames follow one another, so the pieces are joined as they are.
+        return audio.Length == 1 ? audio[0] : [.. audio.SelectMany(piece => piece)];
+    }
+
+    /// <summary>
+    /// Asks for the phrases the service suggests to translate after the given
+    /// beginning, each with its translation.
+    /// </summary>
+    /// <param name="text">The beginning of a phrase.</param>
+    /// <param name="sourceLanguageCode">
+    /// The Google code of the language of the text. The service answers nothing
+    /// to <c>"auto"</c>.
+    /// </param>
+    /// <param name="targetLanguageCode">The Google code of the language to translate into.</param>
+    /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
+    /// <returns>A task that completes with the suggested phrases and their translations.</returns>
+    /// <exception cref="ArgumentException">
+    /// Thrown when a parameter is empty or white-space.
+    /// </exception>
+    /// <exception cref="ProviderException">
+    /// Thrown when the request fails, when Google refuses it, or when the answer
+    /// does not have the expected shape.
+    /// </exception>
+    public async Task<ImmutableArray<(string Phrase, string Translation)>> SuggestAsync(
+        string text,
+        string sourceLanguageCode,
+        string targetLanguageCode,
+        CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        ArgumentException.ThrowIfNullOrWhiteSpace(text);
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceLanguageCode);
+        ArgumentException.ThrowIfNullOrWhiteSpace(targetLanguageCode);
+
+        string arguments = WriteJson(writer =>
+        {
+            writer.WriteStartArray();
+            writer.WriteStringValue(text);
+            writer.WriteStringValue(sourceLanguageCode);
+            writer.WriteStringValue(targetLanguageCode);
+            writer.WriteEndArray();
+        });
+
+        using JsonDocument document = await CallAsync(_options.SuggestionsRpcId, arguments, cancellationToken).ConfigureAwait(false);
+
+        try
+        {
+            ImmutableArray<(string, string)>.Builder suggestions = ImmutableArray.CreateBuilder<(string, string)>();
+
+            // An empty answer is a list with nothing in it, not a refusal.
+            if (document.RootElement.GetArrayLength() == 0)
+            {
+                return suggestions.ToImmutable();
+            }
+
+            foreach (JsonElement pair in document.RootElement[0].EnumerateArray())
+            {
+                suggestions.Add((pair[0].GetString()!, pair[1].GetString()!));
+            }
+
+            return suggestions.ToImmutable();
+        }
+        catch (Exception exception) when (IsShapeError(exception))
+        {
+            throw UnreadableAnswer(exception);
+        }
+    }
+
+    /// <summary>
+    /// Sends one call to the service and returns the document the service wrote
+    /// as a string inside its answer.
+    /// </summary>
+    /// <param name="rpcId">The name of the call.</param>
+    /// <param name="arguments">The arguments of the call, as JSON text.</param>
+    /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
+    /// <returns>The inner document. The caller disposes it.</returns>
+    /// <exception cref="ProviderException">
+    /// Thrown when the request fails, when Google refuses it, or when the answer
+    /// does not have the expected shape.
+    /// </exception>
+    private async Task<JsonDocument> CallAsync(string rpcId, string arguments, CancellationToken cancellationToken)
+    {
         string query = string.Join(
             '&',
-            $"rpcids={Uri.EscapeDataString(_options.RpcId)}",
+            $"rpcids={Uri.EscapeDataString(rpcId)}",
             // The service accepts any number here; it only has to look like a session.
             $"f.sid={Random.Shared.NextInt64(1, long.MaxValue).ToString(CultureInfo.InvariantCulture)}",
             $"bl={Uri.EscapeDataString(_options.BuildLabel)}",
@@ -132,7 +321,7 @@ internal sealed class GoogleBatchExecuteEngine : ProviderEngine
         {
             Content = new FormUrlEncodedContent(
             [
-                new KeyValuePair<string, string>("f.req", BuildRequestBody(text, sourceLanguageCode, targetLanguageCode)),
+                new KeyValuePair<string, string>("f.req", BuildRequestBody(rpcId, arguments)),
             ]),
         };
 
@@ -158,36 +347,21 @@ internal sealed class GoogleBatchExecuteEngine : ProviderEngine
             throw RequestFailed(exception);
         }
 
-        return ReadAnswer(body, text);
+        return ReadAnswer(body, rpcId);
     }
 
     /// <summary>
     /// Writes the <c>f.req</c> form field: the call wrapped in three arrays, with
     /// its arguments written once more as a JSON string.
     /// </summary>
-    private string BuildRequestBody(string text, string sourceLanguageCode, string targetLanguageCode)
+    private static string BuildRequestBody(string rpcId, string arguments)
     {
-        string arguments = WriteJson(writer =>
-        {
-            writer.WriteStartArray();
-            writer.WriteStartArray();
-            writer.WriteStringValue(text);
-            writer.WriteStringValue(sourceLanguageCode);
-            writer.WriteStringValue(targetLanguageCode);
-            writer.WriteBooleanValue(true);
-            writer.WriteEndArray();
-            writer.WriteStartArray();
-            writer.WriteNullValue();
-            writer.WriteEndArray();
-            writer.WriteEndArray();
-        });
-
         return WriteJson(writer =>
         {
             writer.WriteStartArray();
             writer.WriteStartArray();
             writer.WriteStartArray();
-            writer.WriteStringValue(_options.RpcId);
+            writer.WriteStringValue(rpcId);
             writer.WriteStringValue(arguments);
             writer.WriteNullValue();
             writer.WriteStringValue("generic");
@@ -209,10 +383,15 @@ internal sealed class GoogleBatchExecuteEngine : ProviderEngine
         return Encoding.UTF8.GetString(stream.ToArray());
     }
 
+    private static bool IsShapeError(Exception exception)
+    {
+        return exception is JsonException or InvalidOperationException or IndexOutOfRangeException or ArgumentOutOfRangeException or KeyNotFoundException;
+    }
+
     /// <summary>
-    /// Reads the translation and the detected source language out of the answer.
+    /// Finds the answer to the call in the body and returns the document it holds.
     /// </summary>
-    private (string TranslatedText, string? SourceLanguageCode) ReadAnswer(string body, string originalText)
+    private JsonDocument ReadAnswer(string body, string rpcId)
     {
         try
         {
@@ -227,7 +406,7 @@ internal sealed class GoogleBatchExecuteEngine : ProviderEngine
                     && entry[0].ValueKind == JsonValueKind.String
                     && entry[0].GetString() == SuccessMarker
                     && entry[1].ValueKind == JsonValueKind.String
-                    && entry[1].GetString() == _options.RpcId)
+                    && entry[1].GetString() == rpcId)
                 {
                     call = entry;
                     break;
@@ -236,7 +415,7 @@ internal sealed class GoogleBatchExecuteEngine : ProviderEngine
 
             if (call is not { } found)
             {
-                throw new ProviderException(ProviderName, $"{ProviderName} returned no answer to the call '{_options.RpcId}'.");
+                throw new ProviderException(ProviderName, $"{ProviderName} returned no answer to the call '{rpcId}'.");
             }
 
             if (found[2].ValueKind != JsonValueKind.String)
@@ -254,21 +433,9 @@ internal sealed class GoogleBatchExecuteEngine : ProviderEngine
                     : new ProviderException(ProviderName, $"{ProviderName} returned an empty answer.");
             }
 
-            using JsonDocument document = JsonDocument.Parse(found[2].GetString()!);
-
-            JsonElement sentences = document.RootElement[1][0][0][5];
-
-            string translation = JoinSentences(sentences, originalText);
-
-            string? sourceCode = document.RootElement.GetArrayLength() > 2 && document.RootElement[2].ValueKind == JsonValueKind.String
-                ? document.RootElement[2].GetString()
-                : document.RootElement[1].GetArrayLength() > 3 && document.RootElement[1][3].ValueKind == JsonValueKind.String
-                    ? document.RootElement[1][3].GetString()
-                    : null;
-
-            return (translation, sourceCode);
+            return JsonDocument.Parse(found[2].GetString()!);
         }
-        catch (Exception exception) when (exception is JsonException or InvalidOperationException or IndexOutOfRangeException or ArgumentOutOfRangeException or KeyNotFoundException)
+        catch (Exception exception) when (IsShapeError(exception))
         {
             throw UnreadableAnswer(exception);
         }
