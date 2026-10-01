@@ -1,0 +1,17 @@
+using GLAZOV.M.TRANSLATE.Abstractions.Providers;
+
+namespace GLAZOV.M.TRANSLATE.Abstractions.Translation;
+
+/// <summary>
+/// Represents the capability of translating markup while leaving its tags
+/// where they are.
+/// </summary>
+/// <remarks>
+/// This is a capability of its own rather than a flavour of
+/// <see cref="ITextTranslationProvider"/>: a provider may translate text
+/// without being able to keep markup intact, and a caller that hands markup
+/// to a text translator gets its tags translated along with the words.
+/// </remarks>
+public interface IMarkupTranslationProvider : IProvider, IProviderCapability<MarkupTranslationRequest, MarkupTranslationResult>
+{
+}

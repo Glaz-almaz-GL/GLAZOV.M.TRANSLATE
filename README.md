@@ -1,4 +1,4 @@
-# GLTranslate
+# GLAZOV.M.TRANSLATE
 
 Библиотека .NET для работы с переводчиками через единый интерфейс: Google, Microsoft, Bing, Yandex, Baidu, а также облачные API Google Cloud и Yandex Cloud. Тексты, разметка, изображения, транслитерация, озвучивание, словари — каждый провайдер объявляет, что он умеет.
 
@@ -13,9 +13,9 @@ dotnet test GLAZOV.M.TRANSLATE.slnx
 
 ## Структура
 
-- `src/GLTranslate.Abstractions` — общие контракты и базовые типы
-- `src/GLTranslate.Domain` — лингвистическая система
-- `src/GLTranslate.Providers.*` — провайдеры переводчиков
+- `src/GLAZOV.M.TRANSLATE.Abstractions` — общие контракты и базовые типы
+- `src/GLAZOV.M.TRANSLATE.Domain` — лингвистическая система
+- `src/GLAZOV.M.TRANSLATE.Providers.*` — провайдеры переводчиков
 - `tests/` — тесты; проверки на живых сервисах пропускаются
 - `tools/` — генераторы таблиц языков
 

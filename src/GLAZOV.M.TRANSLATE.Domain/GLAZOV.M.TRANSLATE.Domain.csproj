@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GLAZOV.M.TRANSLATE.Abstractions\GLAZOV.M.TRANSLATE.Abstractions.csproj" />
+  </ItemGroup>
+
+  <!-- Entity constructors are internal by design: entities are created by the
+       registries, never by consumers. The test project needs them to verify
+       construction-time validation. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="GLAZOV.M.TRANSLATE.Domain.Tests" />
+  </ItemGroup>
+
+</Project>

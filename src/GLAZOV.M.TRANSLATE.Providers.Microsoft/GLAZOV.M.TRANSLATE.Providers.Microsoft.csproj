@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GLAZOV.M.TRANSLATE.Abstractions\GLAZOV.M.TRANSLATE.Abstractions.csproj" />
+    <ProjectReference Include="..\GLAZOV.M.TRANSLATE.Domain\GLAZOV.M.TRANSLATE.Domain.csproj" />
+    <ProjectReference Include="..\GLAZOV.M.TRANSLATE.Providers.Common\GLAZOV.M.TRANSLATE.Providers.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="GLAZOV.M.TRANSLATE.Providers.Microsoft.Tests" />
+    <InternalsVisibleTo Include="GLAZOV.M.TRANSLATE.Providers.Microsoft.Generator" />
+  </ItemGroup>
+
+</Project>
