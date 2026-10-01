@@ -33,6 +33,12 @@ public sealed record PapagoOptions
     /// </summary>
     public const string DefaultInterfaceLocale = "en";
 
+    /// <summary>
+    /// The default most entries asked of the dictionary in one request.
+    /// </summary>
+    public const int DefaultDictionaryEntryLimit = 30;
+
+    private readonly int _dictionaryEntryLimit = DefaultDictionaryEntryLimit;
     private readonly string _serviceUrl = DefaultServiceUrl;
     private readonly int _maxTextLength = DefaultMaxTextLength;
     private readonly string _interfaceLocale = DefaultInterfaceLocale;
@@ -77,6 +83,24 @@ public sealed record PapagoOptions
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
 
             _maxTextLength = value;
+        }
+    }
+
+    /// <summary>
+    /// Gets the most entries asked of the dictionary in one request. Defaults to
+    /// <see cref="DefaultDictionaryEntryLimit"/>.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when set to zero or a negative number.
+    /// </exception>
+    public int DictionaryEntryLimit
+    {
+        get => _dictionaryEntryLimit;
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+
+            _dictionaryEntryLimit = value;
         }
     }
 
