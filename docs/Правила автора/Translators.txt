@@ -1,0 +1,5 @@
+﻿Google Translator (https://translate.google.com)
+Microsoft Translator (https://api.cognitive.microsofttranslator.com)
+Bing Translator (https://www.bing.com/translator)
+Yandex Translator (https://translate.yandex.com)
+BaiDu Translator (https://fanyi.baidu.com)
