@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\GLTranslate.Providers.GoogleCloud\GLTranslate.Providers.GoogleCloud.csproj" />
+    <ProjectReference Include="..\..\src\GLTranslate.Providers.Google\GLTranslate.Providers.Google.csproj" />
   </ItemGroup>
 
 </Project>

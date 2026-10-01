@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\GLTranslate.Providers.YandexCloud\GLTranslate.Providers.YandexCloud.csproj" />
+    <ProjectReference Include="..\..\src\GLTranslate.Providers.Microsoft\GLTranslate.Providers.Microsoft.csproj" />
   </ItemGroup>
 
 </Project>

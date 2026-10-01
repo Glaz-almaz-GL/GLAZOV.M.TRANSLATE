@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\GLTranslate.Providers.Bing\GLTranslate.Providers.Bing.csproj" />
+    <ProjectReference Include="..\..\src\GLTranslate.Domain\GLTranslate.Domain.csproj" />
   </ItemGroup>
 
 </Project>

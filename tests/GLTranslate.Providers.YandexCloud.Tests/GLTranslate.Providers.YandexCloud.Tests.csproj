@@ -19,11 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="SampleImage.png" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\GLTranslate.Providers.Yandex\GLTranslate.Providers.Yandex.csproj" />
+    <ProjectReference Include="..\..\src\GLTranslate.Providers.YandexCloud\GLTranslate.Providers.YandexCloud.csproj" />
   </ItemGroup>
 
 </Project>

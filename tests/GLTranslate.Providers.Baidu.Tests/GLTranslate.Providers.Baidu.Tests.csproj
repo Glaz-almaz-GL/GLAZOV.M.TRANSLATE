@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\GLTranslate.Domain\GLTranslate.Domain.csproj" />
+    <ProjectReference Include="..\..\src\GLTranslate.Providers.Baidu\GLTranslate.Providers.Baidu.csproj" />
   </ItemGroup>
 
 </Project>

@@ -364,3 +364,14 @@ FodyWeavers.xsd
 /Reference
 /.claude
 /Translators.txt
+
+# Secrets - never in the repo
+appsettings.*.local.json
+*.pfx
+.env
+.secrets/*
+!.secrets/*.example
+
+# Local tooling and notes
+.remember/
+.obsidian/
