@@ -12,10 +12,12 @@ Version 0.1 — 2026-10-01 (составлено по ссылкам проек�
 | GLAZOV.M.TRANSLATE.Domain | Лингвистическая система: языки, культуры, регионы, письменности; неизменяемые реестры (`ImmutableRegistry`); сгенерированные данные `*.g.cs` | Abstractions |
 | GLAZOV.M.TRANSLATE.Providers.Common | Общая основа провайдеров: базовые классы текста, разметки, изображений, транслитерации, `ProviderEngine`, `CredentialedEngine` (общий аккаунт и отказ), `LanguageCodeResolver` | Abstractions, Domain |
 | GLAZOV.M.TRANSLATE.Providers.Google | Google Translate (веб): перевод текста, разметки, транслитерация, озвучивание; таблица языков сгенерирована | Abstractions, Domain, Providers.Common |
+| GLAZOV.M.TRANSLATE.Providers.Google (дополнение) | Второй провайдер перевода текста `GoogleBatchExecuteTranslationProvider` на внутреннем вызове `batchexecute` страницы Google Translate: без токена, куки и версии HTTP; адрес, имя вызова, метка сборки и предел длины — `GoogleBatchExecuteOptions` | то же |
 | GLAZOV.M.TRANSLATE.Providers.GoogleCloud | Google Cloud Translation (официальный API) | то же |
 | GLAZOV.M.TRANSLATE.Providers.Microsoft | Microsoft Translator; таблица написания языков сгенерирована | то же |
 | GLAZOV.M.TRANSLATE.Providers.Bing | Bing Translator | то же |
 | GLAZOV.M.TRANSLATE.Providers.Yandex | Yandex Translate (веб) | то же |
+| GLAZOV.M.TRANSLATE.Providers.Papago | Naver Papago (веб, без ключа): перевод текста и транслитерация (романизация исходного текста — побочный продукт перевода на английский); адрес, предел длины, язык замечаний сервиса — `PapagoOptions` | то же |
 | GLAZOV.M.TRANSLATE.Providers.YandexCloud | Yandex Cloud: официальные API, включая SpeechKit | то же |
 | GLAZOV.M.TRANSLATE.Providers.Baidu | Baidu Fanyi | то же |
 | tools/GLAZOV.M.TRANSLATE.Domain.Generator | Создаёт `*.g.cs` данных домена (языки, регионы, письменности, BCP 47) | — (запуск вручную, пишет в `src/GLAZOV.M.TRANSLATE.Domain`) |
