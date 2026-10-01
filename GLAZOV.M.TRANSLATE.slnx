@@ -8,6 +8,7 @@
   <Project Path="src/GLAZOV.M.TRANSLATE.Providers.GoogleCloud/GLAZOV.M.TRANSLATE.Providers.GoogleCloud.csproj" />
   <Project Path="src/GLAZOV.M.TRANSLATE.Providers.Microsoft/GLAZOV.M.TRANSLATE.Providers.Microsoft.csproj" />
   <Project Path="src/GLAZOV.M.TRANSLATE.Providers.Yandex/GLAZOV.M.TRANSLATE.Providers.Yandex.csproj" />
+  <Project Path="src/GLAZOV.M.TRANSLATE.Providers.Papago/GLAZOV.M.TRANSLATE.Providers.Papago.csproj" />
   <Project Path="src/GLAZOV.M.TRANSLATE.Providers.YandexCloud/GLAZOV.M.TRANSLATE.Providers.YandexCloud.csproj" />
   <Project Path="tests/GLAZOV.M.TRANSLATE.Domain.Tests/GLAZOV.M.TRANSLATE.Domain.Tests.csproj" />
   <Project Path="tests/GLAZOV.M.TRANSLATE.Providers.Baidu.Tests/GLAZOV.M.TRANSLATE.Providers.Baidu.Tests.csproj" />
@@ -17,6 +18,7 @@
   <Project Path="tests/GLAZOV.M.TRANSLATE.Providers.GoogleCloud.Tests/GLAZOV.M.TRANSLATE.Providers.GoogleCloud.Tests.csproj" />
   <Project Path="tests/GLAZOV.M.TRANSLATE.Providers.Microsoft.Tests/GLAZOV.M.TRANSLATE.Providers.Microsoft.Tests.csproj" />
   <Project Path="tests/GLAZOV.M.TRANSLATE.Providers.Yandex.Tests/GLAZOV.M.TRANSLATE.Providers.Yandex.Tests.csproj" />
+  <Project Path="tests/GLAZOV.M.TRANSLATE.Providers.Papago.Tests/GLAZOV.M.TRANSLATE.Providers.Papago.Tests.csproj" />
   <Project Path="tests/GLAZOV.M.TRANSLATE.Providers.YandexCloud.Tests/GLAZOV.M.TRANSLATE.Providers.YandexCloud.Tests.csproj" />
   <Project Path="tools/GLAZOV.M.TRANSLATE.Domain.Generator/GLAZOV.M.TRANSLATE.Domain.Generator.csproj" />
   <Project Path="tools/GLAZOV.M.TRANSLATE.Providers.Google.Generator/GLAZOV.M.TRANSLATE.Providers.Google.Generator.csproj" />
