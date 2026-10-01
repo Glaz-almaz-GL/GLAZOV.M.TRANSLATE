@@ -1,4 +1,4 @@
-using GLTranslate.Providers.Microsoft.Internal;
+﻿using GLTranslate.Providers.Microsoft.Internal;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -19,7 +19,7 @@ internal static class Program
     private const string TokenUrl = "dev.microsofttranslator.com/apps/endpoint?api-version=1.0";
 
     private static readonly string ProviderRoot = Path.GetFullPath(
-        Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "GLTranslate.Providers.Microsoft"));
+        Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "GLTranslate.Providers.Microsoft"));
 
     private static async Task Main()
     {

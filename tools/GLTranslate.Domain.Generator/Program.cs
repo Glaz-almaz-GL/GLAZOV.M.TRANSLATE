@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text;
 
 namespace GLTranslate.Domain.Generator;
@@ -15,7 +15,7 @@ namespace GLTranslate.Domain.Generator;
 internal static class Program
 {
     private static readonly string DomainRoot = Path.GetFullPath(
-        Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "GLTranslate.Domain"));
+        Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "GLTranslate.Domain"));
 
     // Curated: ISO 639-1 language code -> ISO 15924 script codes the language is
     // written in. BCL does not expose this mapping, so it is hand-maintained.

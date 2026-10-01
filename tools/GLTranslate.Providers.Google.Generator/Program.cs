@@ -1,4 +1,4 @@
-using GLTranslate.Domain.Linguistics.Languages;
+﻿using GLTranslate.Domain.Linguistics.Languages;
 using GLTranslate.Domain.Linguistics.Languages.Codes;
 using GLTranslate.Providers.Google.Internal;
 using System.Net;
@@ -34,7 +34,7 @@ internal static class Program
     private static readonly TimeSpan BetweenRequests = TimeSpan.FromMilliseconds(300);
 
     private static readonly string ProviderRoot = Path.GetFullPath(
-        Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "GLTranslate.Providers.Google"));
+        Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "GLTranslate.Providers.Google"));
 
     private static async Task Main()
     {
