@@ -4,23 +4,23 @@ Version 0.1 — 2026-10-01 (составлено по ссылкам проек�
 
 ## Module map
 
-Код — `src/`, тесты — `tests/`, генераторы — `tools/`. Пространство имён всех проектов — `GLTranslate.*`.
+Код — `src/`, тесты — `tests/`, генераторы — `tools/`. Пространство имён всех проектов — `GLAZOV.M.TRANSLATE.*`.
 
 | Module | Responsibility | Depends on |
 |---|---|---|
-| GLTranslate.Abstractions | Контракты и базовые типы: `ValueObject`, `StringValueObject`, `CodeSet`, `EntitySet`, `ICode`, `IIdentifiable`, `IRegistry`; идентификаторы и коды языков; провайдер и его возможности (`IProvider`, `IProviderCapability`); запросы/результаты и интерфейсы перевода текста, разметки, изображений, документов, аудио; транслитерация; озвучивание | — |
-| GLTranslate.Domain | Лингвистическая система: языки, культуры, регионы, письменности; неизменяемые реестры (`ImmutableRegistry`); сгенерированные данные `*.g.cs` | Abstractions |
-| GLTranslate.Providers.Common | Общая основа провайдеров: базовые классы текста, разметки, изображений, транслитерации, `ProviderEngine`, `CredentialedEngine` (общий аккаунт и отказ), `LanguageCodeResolver` | Abstractions, Domain |
-| GLTranslate.Providers.Google | Google Translate (веб): перевод текста, разметки, транслитерация, озвучивание; таблица языков сгенерирована | Abstractions, Domain, Providers.Common |
-| GLTranslate.Providers.GoogleCloud | Google Cloud Translation (официальный API) | то же |
-| GLTranslate.Providers.Microsoft | Microsoft Translator; таблица написания языков сгенерирована | то же |
-| GLTranslate.Providers.Bing | Bing Translator | то же |
-| GLTranslate.Providers.Yandex | Yandex Translate (веб) | то же |
-| GLTranslate.Providers.YandexCloud | Yandex Cloud: официальные API, включая SpeechKit | то же |
-| GLTranslate.Providers.Baidu | Baidu Fanyi | то же |
-| tools/GLTranslate.Domain.Generator | Создаёт `*.g.cs` данных домена (языки, регионы, письменности, BCP 47) | — (запуск вручную, пишет в `src/GLTranslate.Domain`) |
-| tools/GLTranslate.Providers.Google.Generator | Создаёт таблицу языков Google | Providers.Google |
-| tools/GLTranslate.Providers.Microsoft.Generator | Создаёт таблицу языков Microsoft | Providers.Microsoft |
+| GLAZOV.M.TRANSLATE.Abstractions | Контракты и базовые типы: `ValueObject`, `StringValueObject`, `CodeSet`, `EntitySet`, `ICode`, `IIdentifiable`, `IRegistry`; идентификаторы и коды языков; провайдер и его возможности (`IProvider`, `IProviderCapability`); запросы/результаты и интерфейсы перевода текста, разметки, изображений, документов, аудио; транслитерация; озвучивание | — |
+| GLAZOV.M.TRANSLATE.Domain | Лингвистическая система: языки, культуры, регионы, письменности; неизменяемые реестры (`ImmutableRegistry`); сгенерированные данные `*.g.cs` | Abstractions |
+| GLAZOV.M.TRANSLATE.Providers.Common | Общая основа провайдеров: базовые классы текста, разметки, изображений, транслитерации, `ProviderEngine`, `CredentialedEngine` (общий аккаунт и отказ), `LanguageCodeResolver` | Abstractions, Domain |
+| GLAZOV.M.TRANSLATE.Providers.Google | Google Translate (веб): перевод текста, разметки, транслитерация, озвучивание; таблица языков сгенерирована | Abstractions, Domain, Providers.Common |
+| GLAZOV.M.TRANSLATE.Providers.GoogleCloud | Google Cloud Translation (официальный API) | то же |
+| GLAZOV.M.TRANSLATE.Providers.Microsoft | Microsoft Translator; таблица написания языков сгенерирована | то же |
+| GLAZOV.M.TRANSLATE.Providers.Bing | Bing Translator | то же |
+| GLAZOV.M.TRANSLATE.Providers.Yandex | Yandex Translate (веб) | то же |
+| GLAZOV.M.TRANSLATE.Providers.YandexCloud | Yandex Cloud: официальные API, включая SpeechKit | то же |
+| GLAZOV.M.TRANSLATE.Providers.Baidu | Baidu Fanyi | то же |
+| tools/GLAZOV.M.TRANSLATE.Domain.Generator | Создаёт `*.g.cs` данных домена (языки, регионы, письменности, BCP 47) | — (запуск вручную, пишет в `src/GLAZOV.M.TRANSLATE.Domain`) |
+| tools/GLAZOV.M.TRANSLATE.Providers.Google.Generator | Создаёт таблицу языков Google | Providers.Google |
+| tools/GLAZOV.M.TRANSLATE.Providers.Microsoft.Generator | Создаёт таблицу языков Microsoft | Providers.Microsoft |
 | tests/*.Tests | По одному проекту на модуль (кроме Abstractions, у него отдельных тестов нет) | тестируемый модуль |
 
 Нарушений изоляции в ссылках проектов не найдено: провайдеры ссылаются только на Abstractions, Domain и Common и не знают друг о друге; Domain не знает о провайдерах.
